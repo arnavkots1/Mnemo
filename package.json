@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "babel-preset-expo": "~54.0.0",
+    "expo": "^54.0.25"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
+  }
+}

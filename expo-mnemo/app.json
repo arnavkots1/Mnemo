@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "Mnemo",
+    "slug": "mnemo-expo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mnemo.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Mnemo needs location access to log where you were and create contextual memories. All data is stored locally on your device.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Mnemo needs 'Always' location access to log location visits even when the app is in the background. This enables automatic memory creation. All data is stored locally and you can disable this anytime in Settings.",
+        "NSLocationAlwaysUsageDescription": "Mnemo needs 'Always' location access to log location visits even when the app is in the background. This enables automatic memory creation. All data is stored locally and you can disable this anytime in Settings.",
+        "NSMicrophoneUsageDescription": "Mnemo needs microphone access only during Emotional Capture Sessions that you explicitly start. These sessions are foreground-only. Audio is processed on-device and can be deleted anytime.",
+        "NSPhotoLibraryUsageDescription": "Mnemo needs photo library access to import photos you select as moments. We only access photos you explicitly choose—we never scan your entire photo library.",
+        "NSPhotoLibraryAddUsageDescription": "Mnemo needs photo library access to save photos you select as moments. We only access photos you explicitly choose—we never scan your entire photo library.",
+        "NSCalendarsUsageDescription": "Mnemo can optionally enrich your memories with calendar event titles when you're at a location during an event. This is completely optional and you can disable it in Settings."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.mnemo.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECORD_AUDIO",
+        "READ_CALENDAR"
+      ]
+    },
+    "web": {
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Mnemo needs location access to log where you were and create contextual memories."
+        }
+      ],
+      [
+        "expo-task-manager",
+        {
+          "backgroundLocationTask": "BACKGROUND_LOCATION_TASK"
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Mnemo needs microphone access only during Emotional Capture Sessions that you explicitly start."
+        }
+      ],
+      "expo-asset"
+    ]
+  }
+}
