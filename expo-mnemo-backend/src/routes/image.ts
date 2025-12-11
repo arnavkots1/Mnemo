@@ -8,6 +8,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import * as fs from 'fs';
 import * as path from 'path';
+import { analyzeImageWithGemini } from '../services/geminiService';
 
 const router = Router();
 
@@ -56,11 +57,27 @@ router.post('/analyze-image-upload', upload.single('image'), async (req: Request
     console.log(`  - dayOfWeek: ${dayOfWeek}`);
     console.log(`  - location: ${location ? `${location.latitude}, ${location.longitude}` : 'none'}`);
     
-    // TODO: Here you would:
-    // 1. Load image from tempFilePath
-    // 2. Run vision model (GPT-4 Vision, CLIP, etc.)
-    // 3. Generate description based on actual image content
-    // For now, using context-aware stub
+    // Try Gemini AI first (if API key is set)
+    const geminiResult = await analyzeImageWithGemini(tempFilePath, {
+      timeOfDay,
+      dayOfWeek,
+      location: location?.placeName || (location ? `${location.latitude}, ${location.longitude}` : undefined),
+    });
+    
+    if (geminiResult) {
+      console.log(`[Image API] Gemini analyzed: ${geminiResult.summary} (confidence: ${geminiResult.confidence})`);
+      
+      // Clean up temp file
+      if (tempFilePath && fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+      }
+      
+      res.json(geminiResult);
+      return;
+    }
+    
+    // Fallback to context-aware stub if Gemini not available
+    console.log(`[Image API] Using fallback stub (Gemini not available)`);
     
     const parts: string[] = [];
     

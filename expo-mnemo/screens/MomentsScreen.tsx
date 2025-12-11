@@ -338,12 +338,27 @@ export const MomentsScreen: React.FC = () => {
                         source={{ uri: memory.details.uri }}
                         style={styles.photoThumbnail}
                         resizeMode="cover"
+                        onError={(error) => {
+                          console.error('❌ Image load error:', error.nativeEvent.error);
+                          console.error('   URI:', memory.details?.uri);
+                        }}
+                        onLoad={() => {
+                          console.log('✅ Image loaded successfully:', memory.details?.uri);
+                        }}
                       />
                       <View style={styles.memoryContent}>
                         <View style={styles.memoryHeader}>
                           <Text style={styles.memoryTime}>{formatTime(memory.startTime)}</Text>
                           <Text style={styles.memoryTag}>{getKindTag(memory.kind)}</Text>
                         </View>
+                        {memory.details?.isDownloadedPhoto && (
+                          <View style={styles.downloadedIndicator}>
+                            <Ionicons name="download-outline" size={12} color="#FF9500" />
+                            <Text style={styles.downloadedText}>
+                              Using imported time (not original capture time)
+                            </Text>
+                          </View>
+                        )}
                         <Text style={styles.memorySummary}>{memory.summary}</Text>
                         {memory.details?.description && (
                           <Text style={styles.memoryDescription}>{memory.details.description}</Text>
@@ -583,6 +598,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
+  },
+  downloadedIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: '#FFF4E6',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FFE0B2',
+  },
+  downloadedText: {
+    fontSize: 11,
+    color: '#FF9500',
+    marginLeft: 4,
+    fontWeight: '500',
   },
   memorySummary: {
     fontSize: 15,

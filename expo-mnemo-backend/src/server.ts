@@ -5,6 +5,10 @@
  * This is a stub implementation for development/testing.
  */
 
+// Load environment variables from .env file
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import { emotionRouter } from './routes/emotion';
