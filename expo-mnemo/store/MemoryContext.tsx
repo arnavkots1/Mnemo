@@ -126,10 +126,13 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
    */
   const refreshMemories = useCallback(async () => {
     try {
+      console.log('🔄 MemoryContext: Refreshing memories from store...');
       const loadedMemories = await loadMemories();
+      console.log(`📊 MemoryContext: Loaded ${loadedMemories.length} memories from store`);
       setMemories(loadedMemories);
+      console.log(`✅ MemoryContext: Updated state with ${loadedMemories.length} memories`);
     } catch (error) {
-      console.error('Error refreshing memories:', error);
+      console.error('❌ MemoryContext: Error refreshing memories:', error);
       // Don't throw - gracefully handle error, keep existing memories
     }
   }, []);
@@ -163,10 +166,19 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
    */
   const deleteAllMemories = useCallback(async () => {
     try {
+      console.log('🗑️ MemoryContext: Deleting all memories...');
       await deleteAllMemoriesFromStore();
       setMemories([]);
+      console.log('✅ MemoryContext: All memories deleted and state cleared');
+      
+      // Verify deletion worked
+      const remainingMemories = await loadMemories();
+      console.log(`📊 MemoryContext: Verification - ${remainingMemories.length} memories remain in store`);
+      if (remainingMemories.length > 0) {
+        console.warn('⚠️ MemoryContext: Some memories still exist after deletion!');
+      }
     } catch (error) {
-      console.error('Error deleting all memories:', error);
+      console.error('❌ MemoryContext: Error deleting all memories:', error);
       // Still clear local state even if store delete fails
       setMemories([]);
       // Don't throw - gracefully handle error

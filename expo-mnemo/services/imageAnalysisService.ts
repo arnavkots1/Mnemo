@@ -71,21 +71,44 @@ export async function analyzeImage(request: ImageAnalysisRequest): Promise<Image
         dayOfWeek: request.dayOfWeek,
       }));
       
-      const uploadResponse = await fetch(`${apiConfig.apiUrl}/analyze-image-upload`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          // Don't set Content-Type - let FormData set it with boundary
-        },
-      });
+      // Add timeout for image upload (30 seconds for large images)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
       
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.status}`);
+      try {
+        const uploadUrl = `${apiConfig.apiUrl}/analyze-image-upload`;
+        console.log(`📤 Uploading image to: ${uploadUrl}`);
+        console.log(`📤 Image URI: ${request.imageUri}`);
+        
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'POST',
+          body: formData,
+          signal: controller.signal,
+          headers: {
+            // Don't set Content-Type - let FormData set it with boundary
+          },
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error(`❌ Upload failed: ${uploadResponse.status} - ${errorText}`);
+          throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`);
+        }
+        
+        const result = await uploadResponse.json() as ImageAnalysisResponse;
+        console.log('✅ Image uploaded and analyzed successfully');
+        return result;
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          console.error('❌ Image upload timed out after 30 seconds');
+          throw new Error('Image upload timed out after 30 seconds');
+        }
+        console.error('❌ Upload error:', error.message || error);
+        throw error;
       }
-      
-      const result = await uploadResponse.json() as ImageAnalysisResponse;
-      console.log('✅ Image uploaded and analyzed successfully');
-      return result;
     } catch (error) {
       console.error('Error uploading image:', error);
       // Fall back to legacy endpoint

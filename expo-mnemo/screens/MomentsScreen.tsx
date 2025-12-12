@@ -22,7 +22,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useMemoryContext } from '../store/MemoryContext';
 import { MemoryEntry, MemoryKind } from '../types/MemoryEntry';
 import { pickPhotosAndCreateMemories } from '../services/photoService';
-import { getAudioFilePath } from '../services/audioStorageService';
+import { getAudioUri } from '../services/audioStorageService';
+import { loadMemories } from '../store/MemoryStore';
 import * as FileSystem from 'expo-file-system/legacy';
 
 type FilterType = 'all' | MemoryKind;
@@ -37,7 +38,10 @@ export const MomentsScreen: React.FC = () => {
   // Refresh memories when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      refreshMemories();
+      console.log('🔄 MomentsScreen focused - refreshing memories...');
+      refreshMemories().then(() => {
+        console.log(`✅ Memories refreshed: ${memories.length} total memories`);
+      });
     }, [refreshMemories])
   );
 
@@ -81,7 +85,11 @@ export const MomentsScreen: React.FC = () => {
         const fileInfo = await FileSystem.getInfoAsync(audioUri);
         if (!fileInfo.exists) {
           // Try to get the permanent path
-          const permanentPath = getAudioFilePath(memory.id);
+          const permanentPath = await getAudioUri(memory.id);
+          if (!permanentPath) {
+            console.warn(`Audio file not found for memory ${memory.id}`);
+            return;
+          }
           const permanentInfo = await FileSystem.getInfoAsync(permanentPath);
           if (permanentInfo.exists) {
             finalUri = permanentPath;
@@ -173,8 +181,17 @@ export const MomentsScreen: React.FC = () => {
   
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await refreshMemories();
-    setIsRefreshing(false);
+    try {
+      await refreshMemories();
+      console.log(`📊 Memory count after refresh: ${memories.length} total`);
+      
+      // Force a small delay to ensure state updates
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (error) {
+      console.error('Error refreshing memories:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
   
   const handleImportPhotos = async () => {
@@ -183,14 +200,30 @@ export const MomentsScreen: React.FC = () => {
       
       if (memories.length > 0) {
         let successCount = 0;
+        console.log(`📝 Attempting to add ${memories.length} photo memories...`);
         for (const memory of memories) {
           try {
+            console.log(`📝 Adding memory: ${memory.id} (${memory.summary})`);
             await addMemory(memory);
             successCount++;
+            console.log(`✅ Successfully added memory: ${memory.id}`);
           } catch (error) {
-            console.error('Error adding memory:', error);
+            console.error('❌ Error adding memory:', error);
           }
         }
+        console.log(`📝 Import complete: ${successCount}/${memories.length} memories added`);
+        
+        // Force immediate refresh with multiple attempts
+        console.log('🔄 Refreshing memories after import...');
+        await refreshMemories();
+        
+        // Additional refresh after a short delay to ensure UI updates
+        setTimeout(async () => {
+          await refreshMemories();
+          console.log('🔄 Secondary refresh completed');
+        }, 500);
+        
+        Alert.alert('Import Success', `Successfully imported ${successCount} photo(s)!`);
         
         if (successCount > 0) {
           await refreshMemories();
@@ -254,12 +287,20 @@ export const MomentsScreen: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Moments</Text>
-        <TouchableOpacity
-          style={styles.importButton}
-          onPress={handleImportPhotos}
-        >
-          <Text style={styles.importButtonText}>📷 Import Photos</Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={handleRefresh}
+          >
+            <Text style={styles.refreshButtonText}>🔄 Refresh</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.importButton}
+            onPress={handleImportPhotos}
+          >
+            <Text style={styles.importButtonText}>📷 Import Photos</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       
       {/* Filter Tabs */}
@@ -335,12 +376,17 @@ export const MomentsScreen: React.FC = () => {
                   {memory.kind === 'photo' && memory.details?.uri ? (
                     <>
                       <Image
-                        source={{ uri: memory.details.uri }}
+                        source={{ 
+                          uri: memory.details.uri,
+                          // For iOS file:// URIs, ensure proper handling
+                          cache: 'force-cache'
+                        }}
                         style={styles.photoThumbnail}
                         resizeMode="cover"
                         onError={(error) => {
                           console.error('❌ Image load error:', error.nativeEvent.error);
                           console.error('   URI:', memory.details?.uri);
+                          console.error('   Error details:', JSON.stringify(error.nativeEvent, null, 2));
                         }}
                         onLoad={() => {
                           console.log('✅ Image loaded successfully:', memory.details?.uri);
@@ -449,7 +495,7 @@ export const MomentsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
   },
   header: {
     flexDirection: 'row',
@@ -459,18 +505,49 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: '#1e293b',
+    letterSpacing: -0.5,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  refreshButton: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  refreshButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   importButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#3b82f6',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 10,
+    borderRadius: 12,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   importButtonText: {
     color: '#ffffff',
@@ -548,22 +625,26 @@ const styles = StyleSheet.create({
   memoryItem: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
-    padding: 16,
+    padding: 20,
     marginHorizontal: 16,
-    marginVertical: 6,
-    borderRadius: 12,
+    marginVertical: 8,
+    borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
   },
   photoThumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-    backgroundColor: '#f0f0f0',
+    width: 70,
+    height: 70,
+    borderRadius: 12,
+    marginRight: 16,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   iconContainer: {
     width: 60,
@@ -618,17 +699,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   memorySummary: {
-    fontSize: 15,
-    color: '#333',
-    marginBottom: 4,
-    lineHeight: 20,
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#1e293b',
+    marginBottom: 6,
+    lineHeight: 22,
+    fontWeight: '600',
   },
   memoryDescription: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 4,
-    lineHeight: 18,
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 6,
+    lineHeight: 20,
     fontStyle: 'italic',
   },
   emotionLabel: {

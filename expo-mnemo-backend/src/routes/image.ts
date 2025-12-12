@@ -44,15 +44,32 @@ router.post('/analyze-image-upload', upload.single('image'), async (req: Request
   let tempFilePath: string | undefined;
   
   try {
+    console.log(`[Image API] 📥 Received upload request`);
+    console.log(`[Image API] Headers:`, JSON.stringify(req.headers, null, 2));
+    console.log(`[Image API] Body keys:`, Object.keys(req.body));
+    
     if (!req.file) {
+      console.error(`[Image API] ❌ No file in request`);
+      console.error(`[Image API] Request body:`, req.body);
       return res.status(400).json({ error: 'No image file provided' });
     }
     
     tempFilePath = req.file.path;
-    const { location, timeOfDay, dayOfWeek }: AnalyzeImageRequest = JSON.parse(req.body.metadata || '{}');
+    const metadataStr = req.body.metadata || '{}';
+    let location, timeOfDay, dayOfWeek;
     
-    console.log(`[Image API] Received image upload:`);
+    try {
+      const parsed = JSON.parse(metadataStr);
+      location = parsed.location;
+      timeOfDay = parsed.timeOfDay;
+      dayOfWeek = parsed.dayOfWeek;
+    } catch (parseError) {
+      console.warn(`[Image API] Failed to parse metadata:`, parseError);
+    }
+    
+    console.log(`[Image API] ✅ Received image upload:`);
     console.log(`  - File: ${req.file.originalname} (${req.file.size} bytes)`);
+    console.log(`  - Temp path: ${tempFilePath}`);
     console.log(`  - timeOfDay: ${timeOfDay}`);
     console.log(`  - dayOfWeek: ${dayOfWeek}`);
     console.log(`  - location: ${location ? `${location.latitude}, ${location.longitude}` : 'none'}`);

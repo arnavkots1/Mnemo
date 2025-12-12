@@ -7,17 +7,24 @@
 
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import { Accelerometer } from 'expo-sensors';
 import { MemoryEntry, createMemoryEntry } from '../types/MemoryEntry';
 import { generateContextMemorySummary, enhanceMemoryWithContext } from './memoryGenerator';
 
 const BACKGROUND_LOCATION_TASK = 'BACKGROUND_LOCATION_TASK';
-const SIGNIFICANT_DISTANCE_THRESHOLD = 100; // meters
+const SIGNIFICANT_DISTANCE_THRESHOLD = 500; // meters - only update when moved 500m
 const FOREGROUND_POLL_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+const MOTION_THRESHOLD = 2.0; // Much higher threshold to reduce false positives
+const MOTION_CHECK_INTERVAL = 60000; // Check motion every 60 seconds (even less frequent)
 
 // Store last known location to detect significant movement
 let lastKnownLocation: { latitude: number; longitude: number } | null = null;
 let memoryCallback: ((memory: MemoryEntry) => void) | null = null;
 let foregroundPollTimer: NodeJS.Timeout | null = null;
+let motionSubscription: any = null;
+let motionCheckTimer: NodeJS.Timeout | null = null;
+let lastAccelerometerData: { x: number; y: number; z: number } | null = null;
+let lastMagnitude: number | null = null;
 let isPassiveLoggingActive = false;
 
 /**
@@ -231,6 +238,7 @@ export class LocationService {
   
   /**
    * Start foreground polling - periodically gets location when app is in use
+   * Also starts motion-based location updates
    */
   private startForegroundPolling(): void {
     // Get initial location
@@ -240,6 +248,79 @@ export class LocationService {
     foregroundPollTimer = setInterval(() => {
       this.pollLocation();
     }, FOREGROUND_POLL_INTERVAL);
+    
+    // Start motion-based location tracking
+    this.startMotionBasedTracking();
+  }
+  
+  /**
+   * Start motion-based location tracking
+   * Updates location when device movement is detected via accelerometer
+   */
+  private startMotionBasedTracking(): void {
+    // Set accelerometer update interval (10 Hz)
+    Accelerometer.setUpdateInterval(1000);
+    
+    // Subscribe to accelerometer updates
+    motionSubscription = Accelerometer.addListener((accelerometerData) => {
+      lastAccelerometerData = accelerometerData;
+    });
+    
+    // Check for movement periodically
+    motionCheckTimer = setInterval(() => {
+      this.checkMotionAndUpdateLocation();
+    }, MOTION_CHECK_INTERVAL);
+  }
+  
+  /**
+   * Check if device is moving based on accelerometer data
+   * If movement detected, update location
+   */
+  private async checkMotionAndUpdateLocation(): Promise<void> {
+    if (!lastAccelerometerData || !isPassiveLoggingActive) {
+      return;
+    }
+    
+    // Calculate magnitude of acceleration
+    const magnitude = Math.sqrt(
+      lastAccelerometerData.x ** 2 +
+      lastAccelerometerData.y ** 2 +
+      lastAccelerometerData.z ** 2
+    );
+    
+    // Detect CHANGE in acceleration (not absolute value)
+    // Normal gravity is ~1.0, so we detect significant changes from baseline
+    if (lastMagnitude !== null) {
+      const change = Math.abs(magnitude - lastMagnitude);
+      
+      // If change exceeds threshold, device is likely moving
+      if (change > MOTION_THRESHOLD) {
+        console.log(`📱 Motion detected (change: ${change.toFixed(2)}, magnitude: ${magnitude.toFixed(2)}), updating location...`);
+        // Trigger location update
+        await this.pollLocation();
+      }
+    }
+    
+    // Update last magnitude for next check
+    lastMagnitude = magnitude;
+  }
+  
+  /**
+   * Stop motion-based tracking
+   */
+  private stopMotionBasedTracking(): void {
+    if (motionSubscription) {
+      motionSubscription.remove();
+      motionSubscription = null;
+    }
+    
+    if (motionCheckTimer) {
+      clearInterval(motionCheckTimer);
+      motionCheckTimer = null;
+    }
+    
+    lastAccelerometerData = null;
+    lastMagnitude = null;
   }
   
   /**
@@ -251,6 +332,9 @@ export class LocationService {
       foregroundPollTimer = null;
       console.log('Stopped foreground location polling');
     }
+    
+    // Stop motion-based tracking
+    this.stopMotionBasedTracking();
   }
   
   /**

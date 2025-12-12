@@ -9,15 +9,11 @@ import { configureEmotionClassifier } from '../services/EmotionClassifier';
 import { configureImageAnalysis } from '../services/imageAnalysisService';
 
 // Backend API URL
-// For local development: Use your computer's IP address (not localhost)
-// For production: Use your deployed backend URL
-// 
-// ⚠️ IMPORTANT: Change this to your computer's IP address!
-// Find your IP:
-//   Windows: Run `ipconfig` → Look for "IPv4 Address"
-//   Mac/Linux: Run `ifconfig` → Look for "inet" address
-//   Example: 'http://192.168.1.100:3000/api'
-const BACKEND_API_URL = 'http://172.20.10.6:3000/api'; // ⚠️ CHANGE THIS!
+// For local development: set EXPO_PUBLIC_API_URL to your LAN or tunnel URL
+// Example LAN:   http://192.168.88.13:3000/api
+// Example tunnel: https://<your-tunnel>.ngrok-free.app/api
+const BACKEND_API_URL =
+  process.env.EXPO_PUBLIC_API_URL || 'http://192.168.88.10:3000/api'; // override with EXPO_PUBLIC_API_URL
 
 /**
  * Initialize API configuration

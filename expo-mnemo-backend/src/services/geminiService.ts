@@ -32,7 +32,7 @@ function initializeGemini() {
 
   try {
     genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }); // Free tier model
+    model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-002' }); // Updated model for better compatibility
     console.log('[Gemini] ✅ Initialized successfully');
     return true;
   } catch (error) {
