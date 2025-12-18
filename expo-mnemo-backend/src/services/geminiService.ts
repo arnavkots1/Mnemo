@@ -3,6 +3,8 @@
  * 
  * Free tier: 15 requests per minute, 1500 requests per day
  * Get API key: https://aistudio.google.com/app/apikey
+ * 
+ * Rate limiting: 10 requests per minute, 1000 requests per day (conservative)
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -12,6 +14,13 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 let genAI: GoogleGenerativeAI | null = null;
 let model: any = null;
+
+// Rate limiting
+const RATE_LIMIT_PER_MINUTE = 10;
+const RATE_LIMIT_PER_DAY = 1000;
+const requestTimestamps: number[] = [];
+let dailyRequestCount = 0;
+let lastResetDate = new Date().toDateString();
 
 /**
  * Initialize Gemini model
@@ -42,6 +51,54 @@ function initializeGemini() {
 }
 
 /**
+ * Check if we're within rate limits
+ */
+function checkRateLimit(): { allowed: boolean; reason?: string } {
+  const now = Date.now();
+  const currentDate = new Date().toDateString();
+  
+  // Reset daily counter if it's a new day
+  if (currentDate !== lastResetDate) {
+    dailyRequestCount = 0;
+    lastResetDate = currentDate;
+    console.log('[Gemini] Daily rate limit reset');
+  }
+  
+  // Check daily limit
+  if (dailyRequestCount >= RATE_LIMIT_PER_DAY) {
+    return {
+      allowed: false,
+      reason: `Daily limit reached (${RATE_LIMIT_PER_DAY} requests per day)`,
+    };
+  }
+  
+  // Remove timestamps older than 1 minute
+  const oneMinuteAgo = now - 60000;
+  while (requestTimestamps.length > 0 && requestTimestamps[0] < oneMinuteAgo) {
+    requestTimestamps.shift();
+  }
+  
+  // Check per-minute limit
+  if (requestTimestamps.length >= RATE_LIMIT_PER_MINUTE) {
+    return {
+      allowed: false,
+      reason: `Rate limit reached (${RATE_LIMIT_PER_MINUTE} requests per minute)`,
+    };
+  }
+  
+  return { allowed: true };
+}
+
+/**
+ * Record a successful API request
+ */
+function recordRequest() {
+  requestTimestamps.push(Date.now());
+  dailyRequestCount++;
+  console.log(`[Gemini] Request recorded. Today: ${dailyRequestCount}/${RATE_LIMIT_PER_DAY}, Last minute: ${requestTimestamps.length}/${RATE_LIMIT_PER_MINUTE}`);
+}
+
+/**
  * Analyze image using Gemini Vision API
  */
 export async function analyzeImageWithGemini(
@@ -57,6 +114,14 @@ export async function analyzeImageWithGemini(
   tags: string[];
   confidence: number;
 } | null> {
+  // Check rate limit first
+  const rateLimitCheck = checkRateLimit();
+  if (!rateLimitCheck.allowed) {
+    console.warn(`[Gemini] ⚠️ Rate limit exceeded: ${rateLimitCheck.reason}`);
+    console.warn('[Gemini] Falling back to context-aware stub');
+    return null; // Will fall back to stub in the route handler
+  }
+  
   // Initialize if not already done
   if (!model && !initializeGemini()) {
     return null;
@@ -123,6 +188,9 @@ Format your response as JSON:
       const jsonStr = jsonMatch ? jsonMatch[1] || jsonMatch[0] : text;
       const parsed = JSON.parse(jsonStr);
 
+      // Record successful request
+      recordRequest();
+      
       return {
         summary: parsed.summary || 'Photo moment',
         description: parsed.description || 'A memorable moment captured',
@@ -137,6 +205,9 @@ Format your response as JSON:
       const lines = text.split('\n').filter((l: string) => l.trim());
       const summary = lines[0]?.replace(/^[0-9]+\.\s*/, '').trim() || 'Photo moment';
       const description = lines.slice(0, 3).join(' ').trim() || text.substring(0, 200);
+
+      // Record successful request (even if parsing failed)
+      recordRequest();
 
       return {
         summary: summary.substring(0, 50), // Limit length

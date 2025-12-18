@@ -74,14 +74,26 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
    */
   const addMemory = useCallback(async (memory: MemoryEntry) => {
     try {
+      console.log(`➕ MemoryContext: Adding memory ${memory.id}`);
       await addMemoryToStore(memory);
+      console.log(`✅ MemoryContext: Memory saved to store`);
+      
       // Update local state immediately for responsive UI
-      setMemories((prev) => [...prev, memory]);
+      setMemories((prev) => {
+        const updated = [...prev, memory];
+        console.log(`📊 MemoryContext: State updated (${updated.length} total)`);
+        return updated;
+      });
+      
+      // Small delay to ensure state propagation
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Also refresh from store to ensure consistency
       const updatedMemories = await loadMemories();
       setMemories(updatedMemories);
+      console.log(`🔄 MemoryContext: Verified state (${updatedMemories.length} total)`);
     } catch (error) {
-      console.error('Error adding memory:', error);
+      console.error('❌ MemoryContext: Error adding memory:', error);
       // Still update local state even if store save fails
       setMemories((prev) => [...prev, memory]);
       // Don't throw - gracefully handle error

@@ -12,6 +12,13 @@ import { analyzeImageWithGemini } from '../services/geminiService';
 
 const router = Router();
 
+// Ensure uploads directory exists
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('[Image API] Created uploads directory');
+}
+
 // Configure multer for file uploads
 const upload = multer({ 
   dest: 'uploads/',

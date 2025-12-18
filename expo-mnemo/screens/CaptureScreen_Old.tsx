@@ -32,11 +32,6 @@ export const CaptureScreen: React.FC = () => {
     }
     navigation.navigate('EmotionalSession');
   };
-
-  const handleOpenVision = () => {
-    // Navigate to Vision tab
-    (navigation as any).navigate('Vision');
-  };
   
   return (
     <ScrollView 
@@ -54,46 +49,6 @@ export const CaptureScreen: React.FC = () => {
             Capture what matters. Photos, voice notes, and places—all in one beautiful timeline.
           </Text>
         </View>
-      </View>
-
-      {/* Vision Feature Highlight */}
-      <View style={styles.visionSection}>
-        <View style={styles.visionBadge}>
-          <Text style={styles.visionBadgeText}>FEATURED</Text>
-        </View>
-        <Text style={styles.visionTitle}>Mnemo Vision</Text>
-        <Text style={styles.visionSubtitle}>AI-Powered Memory Creation</Text>
-        <Text style={styles.visionDescription}>
-          Combine photos, voice notes, and location in one place. Our AI analyzes everything 
-          and creates rich, meaningful memories with intelligent summaries and insights.
-        </Text>
-        
-        <View style={styles.visionFeatures}>
-          <View style={styles.visionFeature}>
-            <Text style={styles.visionFeatureIcon}>✓</Text>
-            <Text style={styles.visionFeatureText}>Smart photo analysis</Text>
-          </View>
-          <View style={styles.visionFeature}>
-            <Text style={styles.visionFeatureIcon}>✓</Text>
-            <Text style={styles.visionFeatureText}>Voice & emotion detection</Text>
-          </View>
-          <View style={styles.visionFeature}>
-            <Text style={styles.visionFeatureIcon}>✓</Text>
-            <Text style={styles.visionFeatureText}>Location context</Text>
-          </View>
-          <View style={styles.visionFeature}>
-            <Text style={styles.visionFeatureIcon}>✓</Text>
-            <Text style={styles.visionFeatureText}>Your personal notes</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity 
-          style={styles.visionButton}
-          onPress={handleOpenVision}
-        >
-          <Text style={styles.visionButtonText}>Open Mnemo Vision</Text>
-          <Text style={styles.visionButtonArrow}>→</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Feature Cards */}
@@ -189,94 +144,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontWeight: '400',
   },
-  visionSection: {
-    marginHorizontal: 16,
-    marginTop: 24,
-    padding: 24,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: 'rgba(59, 130, 246, 0.3)',
-  },
-  visionBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  visionBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: 1,
-  },
-  visionTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginBottom: 6,
-    letterSpacing: -0.5,
-  },
-  visionSubtitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#3b82f6',
-    marginBottom: 16,
-    letterSpacing: 0.5,
-  },
-  visionDescription: {
-    fontSize: 15,
-    color: '#cbd5e1',
-    lineHeight: 24,
-    marginBottom: 20,
-  },
-  visionFeatures: {
-    gap: 12,
-    marginBottom: 24,
-  },
-  visionFeature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  visionFeatureIcon: {
-    fontSize: 16,
-    color: '#10b981',
-    fontWeight: '700',
-  },
-  visionFeatureText: {
-    fontSize: 14,
-    color: '#e2e8f0',
-    fontWeight: '500',
-  },
-  visionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#3b82f6',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
-    gap: 8,
-  },
-  visionButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: 0.3,
-  },
-  visionButtonArrow: {
-    fontSize: 20,
-    color: '#ffffff',
-    fontWeight: '700',
-  },
   features: {
     padding: 20,
     gap: 16,
@@ -287,6 +154,7 @@ const styles = StyleSheet.create({
     padding: 24,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
+    backdropFilter: 'blur(20px)',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -333,6 +201,21 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  secondaryButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  secondaryButtonText: {
+    color: '#e2e8f0',
+    fontSize: 16,
+    fontWeight: '600',
     letterSpacing: 0.2,
   },
   infoChip: {

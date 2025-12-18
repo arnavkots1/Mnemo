@@ -352,7 +352,12 @@ export class LocationService {
         new Date(location.timestamp)
       );
     } catch (error) {
-      console.error('Error polling location:', error);
+      // Silently handle location errors (expected when location services unavailable)
+      // This is normal in emulator or when user hasn't enabled location
+      // Only log in dev mode to avoid spamming
+      if (__DEV__) {
+        console.log('📍 Location unavailable (this is normal in emulator)');
+      }
     }
   }
   

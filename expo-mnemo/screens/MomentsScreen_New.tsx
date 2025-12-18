@@ -267,10 +267,10 @@ export const MomentsScreen: React.FC = () => {
           contentContainerStyle={styles.filterScroll}
         >
           {[
-            { key: 'all', label: 'All' },
-            { key: 'photo', label: 'Photos' },
-            { key: 'emotional', label: 'Audio' },
-            { key: 'context', label: 'Places' },
+            { key: 'all', label: 'All', icon: '✨' },
+            { key: 'photo', label: 'Photos', icon: '📸' },
+            { key: 'emotional', label: 'Audio', icon: '🎙️' },
+            { key: 'context', label: 'Places', icon: '📍' },
           ].map((tab) => (
             <TouchableOpacity
               key={tab.key}
@@ -280,6 +280,7 @@ export const MomentsScreen: React.FC = () => {
               ]}
               onPress={() => setFilter(tab.key as FilterType)}
             >
+              <Text style={styles.filterIcon}>{tab.icon}</Text>
               <Text style={[
                 styles.filterText,
                 filter === tab.key && styles.filterTextActive,
@@ -504,22 +505,27 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
+    gap: 6,
   },
   filterTabActive: {
     backgroundColor: 'rgba(59, 130, 246, 0.2)',
     borderColor: '#3b82f6',
   },
+  filterIcon: {
+    fontSize: 16,
+  },
   filterText: {
     fontSize: 14,
     color: '#94a3b8',
     fontWeight: '600',
-    letterSpacing: 0.5,
   },
   filterTextActive: {
     color: '#3b82f6',
