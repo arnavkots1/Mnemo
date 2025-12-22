@@ -1,12 +1,16 @@
 /**
  * Memory Analyzer - Intelligent memory generation from multiple data sources
  * 
+ * PRIMARY: Uses Gemini AI for comprehensive memory analysis
+ * FALLBACK: Local analysis if Gemini unavailable
+ * 
  * Combines location, photos, audio, and time context to generate rich memories
- * Works with limited data and uses Gemini AI for intelligent analysis
+ * Works with limited data and provides warnings when data is insufficient
  */
 
 import { MemoryEntry, MemoryKind } from '../types/MemoryEntry';
 import { analyzeImage } from './imageAnalysisService';
+import { API_CONFIG } from '../config/apiConfig';
 
 export interface MemoryData {
   // Core data
@@ -45,13 +49,123 @@ export interface GeneratedMemory {
   tags: string[];
   confidence: number;
   dataSources: string[]; // What data was used to generate this
+  warnings?: string[]; // Warnings about data quality
+  dataQuality?: 'excellent' | 'good' | 'limited' | 'minimal';
+  usedGemini?: boolean; // Whether Gemini was used
 }
 
 /**
- * Analyze and generate a memory from available data
+ * Analyze and generate a memory from available data using Gemini AI (PRIMARY)
+ * Falls back to local analysis if Gemini unavailable
  * Works intelligently even with partial data
  */
 export async function generateMemory(data: MemoryData): Promise<GeneratedMemory> {
+  // TRY GEMINI FIRST (PRIMARY METHOD)
+  try {
+    const geminiResult = await analyzeWithGemini(data);
+    if (geminiResult) {
+      console.log('✅ Using Gemini AI for memory analysis');
+      return geminiResult;
+    }
+  } catch (error) {
+    console.log('⚠️ Gemini unavailable, using local analysis');
+  }
+  
+  // FALLBACK: Local analysis
+  console.log('📝 Using local memory analysis');
+  return await generateMemoryLocal(data);
+}
+
+/**
+ * Analyze memory using Gemini AI (PRIMARY METHOD)
+ */
+async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | null> {
+  try {
+    const formData = new FormData();
+    
+    // Add photo if available
+    if (data.photoUri) {
+      const filename = data.photoUri.split('/').pop() || 'photo.jpg';
+      const fileType = filename.endsWith('.png') ? 'image/png' : 'image/jpeg';
+      
+      formData.append('photo', {
+        uri: data.photoUri,
+        type: fileType,
+        name: filename,
+      } as any);
+    }
+    
+    // Add audio transcript if available (would need speech-to-text)
+    // For now, we'll skip audio transcript
+    
+    // Add location
+    if (data.location) {
+      if (data.location.placeName) {
+        formData.append('locationName', data.location.placeName);
+      }
+      formData.append('latitude', data.location.latitude.toString());
+      formData.append('longitude', data.location.longitude.toString());
+    }
+    
+    // Add user note
+    if (data.userNote) {
+      formData.append('userNote', data.userNote);
+    }
+    
+    // Add timestamp and context
+    formData.append('timestamp', data.timestamp.toISOString());
+    
+    const timeContext = getTimeContext(data.timestamp);
+    formData.append('timeOfDay', timeContext.timeOfDay);
+    formData.append('dayOfWeek', timeContext.dayOfWeek);
+    
+    // Add emotion if available
+    if (data.audioEmotion) {
+      formData.append('audioEmotion', data.audioEmotion.emotion);
+    }
+    
+    // Call Gemini memory analysis API
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/memory/analyze`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    return {
+      summary: result.summary,
+      description: result.description,
+      tags: result.tags || [],
+      confidence: result.confidence || 0.8,
+      dataSources: result.dataSources || [],
+      warnings: result.warnings || [],
+      dataQuality: result.dataQuality || 'good',
+      usedGemini: result.usedGemini !== false,
+    };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log('⏱️ Gemini API timeout');
+    } else {
+      console.log('❌ Gemini API error:', error);
+    }
+    return null;
+  }
+}
+
+/**
+ * Local memory analysis (FALLBACK)
+ */
+async function generateMemoryLocal(data: MemoryData): Promise<GeneratedMemory> {
   const dataSources: string[] = [];
   let summary = '';
   let description = '';
@@ -186,7 +300,7 @@ export async function createRichMemory(
   kind: MemoryKind,
   data: MemoryData
 ): Promise<Omit<MemoryEntry, 'id'>> {
-  // Generate intelligent summary and description
+  // Generate intelligent summary and description using Gemini (primary) or local (fallback)
   const generated = await generateMemory(data);
 
   // Build memory entry
@@ -200,6 +314,9 @@ export async function createRichMemory(
       confidence: generated.confidence,
       dataSources: generated.dataSources,
       tags: generated.tags,
+      warnings: generated.warnings || [],
+      dataQuality: generated.dataQuality || 'good',
+      usedGemini: generated.usedGemini !== false,
     },
   };
 

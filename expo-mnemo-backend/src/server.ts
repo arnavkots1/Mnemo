@@ -27,9 +27,13 @@ app.use(cors()); // Allow requests from Expo app
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For file uploads
 
+// Import memory analysis routes
+import memoryAnalysisRouter from './routes/memoryAnalysis';
+
 // Routes
 app.use('/api', emotionRouter);
 app.use('/api', imageRouter);
+app.use('/api/memory', memoryAnalysisRouter); // Comprehensive memory analysis
 
 // Health check endpoint
 app.get('/health', (req, res) => {

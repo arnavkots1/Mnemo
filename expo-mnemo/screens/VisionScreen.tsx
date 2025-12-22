@@ -21,6 +21,7 @@ import * as Location from 'expo-location';
 import { createRichMemory, MemoryData } from '../services/memoryAnalyzer';
 import { useMemoryContext } from '../store/MemoryContext';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
+import { DataQualityWarning } from '../components/DataQualityWarning';
 
 export const VisionScreen: React.FC = () => {
   const { addMemory } = useMemoryContext();
@@ -31,6 +32,7 @@ export const VisionScreen: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [recordingObject, setRecordingObject] = useState<Audio.Recording | null>(null);
+  const [lastGeneratedMemory, setLastGeneratedMemory] = useState<any>(null);
 
   const handleSelectPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -154,9 +156,18 @@ export const VisionScreen: React.FC = () => {
         memoryData
       );
 
-      await addMemory({ ...memory, id: generateUUID() });
+      const fullMemory = { ...memory, id: generateUUID() };
+      await addMemory(fullMemory);
 
-      Alert.alert('Success!', 'Memory created and saved to your timeline');
+      // Store for showing data quality info
+      setLastGeneratedMemory({
+        ...fullMemory,
+        warnings: memory.details?.warnings || [],
+        dataQuality: memory.details?.dataQuality || 'good',
+        dataSources: memory.details?.dataSources || [],
+      });
+
+      Alert.alert('Success! ✨', 'Memory created and saved to your timeline');
 
       // Reset form
       setSelectedPhoto(null);
@@ -196,9 +207,19 @@ export const VisionScreen: React.FC = () => {
         {/* Hero Section */}
         <View style={styles.hero}>
           <Text style={styles.heroText}>
-            Combine photos, voice, and location. Our AI creates beautiful memories with intelligent insights.
+            Combine photos, voice, and location. Gemini AI creates beautiful memories with intelligent insights.
           </Text>
         </View>
+
+        {/* Show last generated memory quality */}
+        {lastGeneratedMemory && (
+          <DataQualityWarning
+            quality={lastGeneratedMemory.dataQuality}
+            warnings={lastGeneratedMemory.warnings}
+            dataSources={lastGeneratedMemory.dataSources}
+            style={{ marginHorizontal: Spacing.md }}
+          />
+        )}
 
         {/* Input Cards */}
         <View style={styles.cardsContainer}>
