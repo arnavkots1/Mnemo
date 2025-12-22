@@ -58,17 +58,9 @@ export const MomentsScreen: React.FC = () => {
   }, [memories, filter]);
 
   const groupedMemories = React.useMemo(() => {
-    // Remove duplicates by ID first
-    const uniqueMemories = filteredMemories.reduce((acc: MemoryEntry[], memory) => {
-      if (!acc.some(m => m.id === memory.id)) {
-        acc.push(memory);
-      }
-      return acc;
-    }, []);
-    
     const groups: { [key: string]: MemoryEntry[] } = {};
     
-    uniqueMemories.forEach((memory) => {
+    filteredMemories.forEach((memory) => {
       const date = new Date(memory.startTime);
       const dateKey = date.toLocaleDateString('en-US', { 
         weekday: 'short',
@@ -151,7 +143,7 @@ export const MomentsScreen: React.FC = () => {
 
       if (!memory.details?.audioPath) return;
       
-      const permanentPath = await getAudioUri(memory.details.audioPath);
+      const permanentPath = getAudioUri(memory.details.audioPath);
       if (!permanentPath) return;
 
       const fileInfo = await FileSystem.getInfoAsync(permanentPath);
@@ -194,8 +186,8 @@ export const MomentsScreen: React.FC = () => {
         <View style={styles.memoryIconBadge}>
           <Text style={styles.memoryIcon}>
             {memory.kind === 'photo' ? '📸' : 
-             memory.kind === 'emotional' ? '🎙️' : 
-             memory.kind === 'context' ? '📍' : '✨'}
+             memory.kind === 'audio' ? '🎙️' : 
+             memory.kind === 'context_log' ? '📍' : '✨'}
           </Text>
         </View>
 
@@ -212,9 +204,9 @@ export const MomentsScreen: React.FC = () => {
           </View>
 
           {/* Description */}
-          {memory.details?.description && (
+          {memory.description && (
             <Text style={styles.memoryDescription} numberOfLines={2}>
-              {memory.details.description}
+              {memory.description}
             </Text>
           )}
 
@@ -228,7 +220,7 @@ export const MomentsScreen: React.FC = () => {
           )}
 
           {/* Audio Player */}
-          {memory.kind === 'emotional' && memory.details?.audioPath && (
+          {memory.kind === 'audio' && memory.details?.audioPath && (
             <TouchableOpacity 
               style={styles.audioPlayer}
               onPress={() => playAudio(memory)}
@@ -252,16 +244,16 @@ export const MomentsScreen: React.FC = () => {
           )}
 
           {/* Location */}
-          {(memory.placeName || memory.details?.locationName) && (
+          {memory.details?.locationName && (
             <View style={styles.locationBadge}>
-              <Text style={styles.locationText}>📍 {memory.placeName || memory.details?.locationName}</Text>
+              <Text style={styles.locationText}>📍 {memory.details.locationName}</Text>
             </View>
           )}
 
           {/* Tags */}
           {memory.details?.tags && memory.details.tags.length > 0 && (
             <View style={styles.tagsContainer}>
-              {memory.details.tags.slice(0, 3).map((tag: string, index: number) => (
+              {memory.details.tags.slice(0, 3).map((tag, index) => (
                 <View key={index} style={styles.tag}>
                   <Text style={styles.tagText}>{tag}</Text>
                 </View>
@@ -322,18 +314,18 @@ export const MomentsScreen: React.FC = () => {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterPill, filter === 'emotional' && styles.filterPillActive]}
-          onPress={() => setFilter('emotional')}
+          style={[styles.filterPill, filter === 'audio' && styles.filterPillActive]}
+          onPress={() => setFilter('audio')}
         >
-          <Text style={[styles.filterText, filter === 'emotional' && styles.filterTextActive]}>
+          <Text style={[styles.filterText, filter === 'audio' && styles.filterTextActive]}>
             Audio
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterPill, filter === 'context' && styles.filterPillActive]}
-          onPress={() => setFilter('context')}
+          style={[styles.filterPill, filter === 'context_log' && styles.filterPillActive]}
+          onPress={() => setFilter('context_log')}
         >
-          <Text style={[styles.filterText, filter === 'context' && styles.filterTextActive]}>
+          <Text style={[styles.filterText, filter === 'context_log' && styles.filterTextActive]}>
             Places
           </Text>
         </TouchableOpacity>
@@ -663,4 +655,5 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
 });
+
 

@@ -63,15 +63,20 @@ const AppContent: React.FC = () => {
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#3b82f6',
-          tabBarInactiveTintColor: '#64748b',
+          tabBarActiveTintColor: '#FFD4C3',
+          tabBarInactiveTintColor: '#8B8B9E',
           tabBarStyle: {
             paddingBottom: 8,
             paddingTop: 8,
             height: 68,
-            backgroundColor: '#1e293b',
+            backgroundColor: '#FFFFFF',
             borderTopWidth: 1,
-            borderTopColor: 'rgba(255, 255, 255, 0.1)',
+            borderTopColor: '#E8E8EE',
+            shadowColor: 'rgba(93, 93, 111, 0.15)',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 1,
+            shadowRadius: 8,
+            elevation: 8,
           },
           tabBarLabelStyle: {
             fontSize: 12,

@@ -1,6 +1,7 @@
 /**
  * VisionScreen - AI-powered memory generation
- * Soft pastel design
+ * 
+ * Combine photos, audio, and location to create rich memories
  */
 
 import React, { useState } from 'react';
@@ -20,7 +21,6 @@ import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import { createRichMemory, MemoryData } from '../services/memoryAnalyzer';
 import { useMemoryContext } from '../store/MemoryContext';
-import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
 
 export const VisionScreen: React.FC = () => {
   const { addMemory } = useMemoryContext();
@@ -133,8 +133,8 @@ export const VisionScreen: React.FC = () => {
   };
 
   const handleGenerate = async () => {
-    if (!selectedPhoto && !audioUri && !location && !userNote.trim()) {
-      Alert.alert('Add some data', 'Select a photo, record audio, add location, or write a note to generate a memory');
+    if (!selectedPhoto && !audioUri && !location) {
+      Alert.alert('Add some data', 'Select a photo, record audio, or add location to generate a memory');
       return;
     }
 
@@ -184,19 +184,22 @@ export const VisionScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Mnemo Vision</Text>
-        <Text style={styles.subtitle}>AI-powered memory creation</Text>
+        <View>
+          <Text style={styles.title}>Mnemo Vision</Text>
+          <Text style={styles.subtitle}>AI-powered memory creation</Text>
+        </View>
       </View>
 
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+        decelerationRate="fast"
+        scrollEventThrottle={16}
       >
         {/* Hero Section */}
         <View style={styles.hero}>
           <Text style={styles.heroText}>
-            Combine photos, voice, and location. Our AI creates beautiful memories with intelligent insights.
+            Combine photos, voice, and location. Our AI creates beautiful memories.
           </Text>
         </View>
 
@@ -204,15 +207,10 @@ export const VisionScreen: React.FC = () => {
         <View style={styles.cardsContainer}>
           {/* Photo Card */}
           <View style={styles.inputCard}>
-            <View style={styles.cardHeader}>
-              <View style={styles.iconBadge}>
-                <Text style={styles.iconText}>📸</Text>
-              </View>
-              <View>
-                <Text style={styles.cardTitle}>Photo</Text>
-                <Text style={styles.cardDescription}>Add a photo for visual context</Text>
-              </View>
-            </View>
+            <Text style={styles.cardTitle}>Photo</Text>
+            <Text style={styles.cardDescription}>
+              Add a photo for visual context
+            </Text>
             
             {selectedPhoto ? (
               <View style={styles.previewContainer}>
@@ -233,19 +231,14 @@ export const VisionScreen: React.FC = () => {
 
           {/* Audio Card */}
           <View style={styles.inputCard}>
-            <View style={styles.cardHeader}>
-              <View style={styles.iconBadge}>
-                <Text style={styles.iconText}>🎙️</Text>
-              </View>
-              <View>
-                <Text style={styles.cardTitle}>Voice Note</Text>
-                <Text style={styles.cardDescription}>Record your thoughts</Text>
-              </View>
-            </View>
+            <Text style={styles.cardTitle}>Voice Note</Text>
+            <Text style={styles.cardDescription}>
+              Record your thoughts
+            </Text>
             
             {audioUri ? (
               <View style={styles.audioPreview}>
-                <Text style={styles.audioPreviewText}>Recording saved ✓</Text>
+                <Text style={styles.audioPreviewText}>Recording saved</Text>
                 <TouchableOpacity 
                   style={styles.removeButton}
                   onPress={() => setAudioUri(null)}
@@ -258,8 +251,8 @@ export const VisionScreen: React.FC = () => {
                 style={[styles.addButton, isRecording && styles.recordingButton]}
                 onPress={isRecording ? handleStopRecording : handleStartRecording}
               >
-                <Text style={[styles.addButtonText, isRecording && styles.recordingButtonText]}>
-                  {isRecording ? '⏹ Stop Recording' : '⏺ Start Recording'}
+                <Text style={styles.addButtonText}>
+                  {isRecording ? 'Stop Recording' : 'Start Recording'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -267,15 +260,10 @@ export const VisionScreen: React.FC = () => {
 
           {/* Location Card */}
           <View style={styles.inputCard}>
-            <View style={styles.cardHeader}>
-              <View style={styles.iconBadge}>
-                <Text style={styles.iconText}>📍</Text>
-              </View>
-              <View>
-                <Text style={styles.cardTitle}>Location</Text>
-                <Text style={styles.cardDescription}>Where are you?</Text>
-              </View>
-            </View>
+            <Text style={styles.cardTitle}>Location</Text>
+            <Text style={styles.cardDescription}>
+              Where are you?
+            </Text>
             
             {location ? (
               <View style={styles.locationPreview}>
@@ -296,26 +284,20 @@ export const VisionScreen: React.FC = () => {
 
           {/* Note Card */}
           <View style={styles.inputCard}>
-            <View style={styles.cardHeader}>
-              <View style={styles.iconBadge}>
-                <Text style={styles.iconText}>✏️</Text>
-              </View>
-              <View>
-                <Text style={styles.cardTitle}>Your Note</Text>
-                <Text style={styles.cardDescription}>Add your own caption</Text>
-              </View>
-            </View>
+            <Text style={styles.cardTitle}>Your Note</Text>
+            <Text style={styles.cardDescription}>
+              Add your own caption
+            </Text>
             
             <TextInput
               style={styles.textInput}
               placeholder="What's happening?"
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor="#64748b"
               value={userNote}
               onChangeText={setUserNote}
               multiline
               maxLength={200}
             />
-            <Text style={styles.charCount}>{userNote.length}/200</Text>
           </View>
         </View>
 
@@ -336,7 +318,7 @@ export const VisionScreen: React.FC = () => {
             disabled={!hasData || isGenerating}
           >
             {isGenerating ? (
-              <ActivityIndicator color={Colors.textPrimary} />
+              <ActivityIndicator color="#ffffff" />
             ) : (
               <Text style={styles.generateButtonText}>Generate Memory</Text>
             )}
@@ -369,217 +351,208 @@ function generateUUID(): string {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: '#0f172a',
   },
   header: {
     paddingTop: 60,
-    paddingBottom: Spacing.lg,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.cardDark,
+    paddingBottom: 20,
+    paddingHorizontal: 24,
+    backgroundColor: '#1e293b',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   title: {
     fontSize: 32,
     fontWeight: '800',
-    color: Colors.textLight,
+    color: '#ffffff',
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.textMuted,
+    color: '#94a3b8',
     marginTop: 4,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: Spacing.lg,
+    paddingBottom: 20,
   },
   hero: {
-    padding: Spacing.lg,
-    backgroundColor: Colors.cardDark,
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.lg,
-    borderRadius: BorderRadius.large,
-    ...Shadows.small,
+    padding: 24,
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    marginHorizontal: 16,
+    marginTop: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
   },
   heroText: {
     fontSize: 15,
-    color: Colors.textLight,
+    color: '#cbd5e1',
     lineHeight: 24,
     textAlign: 'center',
   },
   cardsContainer: {
-    padding: Spacing.md,
-    gap: Spacing.md,
+    padding: 16,
+    gap: 16,
   },
   inputCard: {
-    backgroundColor: Colors.cardLight,
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.large,
-    ...Shadows.small,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  iconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.medium,
-    backgroundColor: Colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconText: {
-    fontSize: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   cardTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#ffffff',
+    marginBottom: 6,
   },
   cardDescription: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 2,
+    fontSize: 14,
+    color: '#94a3b8',
+    marginBottom: 16,
   },
   addButton: {
-    backgroundColor: Colors.secondary,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.medium,
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     alignItems: 'center',
-    ...Shadows.small,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
   },
   recordingButton: {
-    backgroundColor: Colors.error,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   addButtonText: {
-    color: Colors.textPrimary,
+    color: '#3b82f6',
     fontSize: 15,
     fontWeight: '700',
   },
-  recordingButtonText: {
-    color: Colors.textLight,
-  },
   previewContainer: {
-    gap: Spacing.sm,
+    gap: 12,
   },
   photoPreview: {
     width: '100%',
     height: 200,
-    borderRadius: BorderRadius.medium,
-    backgroundColor: Colors.background,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   audioPreview: {
-    backgroundColor: Colors.success,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.medium,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    gap: 12,
   },
   audioPreviewText: {
-    color: Colors.textPrimary,
+    color: '#10b981',
     fontSize: 14,
     fontWeight: '600',
   },
   locationPreview: {
-    backgroundColor: Colors.secondary,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.medium,
-    gap: Spacing.sm,
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+    gap: 12,
   },
   locationText: {
-    color: Colors.textPrimary,
+    color: '#3b82f6',
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
   },
   removeButton: {
-    backgroundColor: Colors.background,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.small,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   removeButtonText: {
-    color: Colors.textSecondary,
+    color: '#ef4444',
     fontSize: 13,
     fontWeight: '700',
   },
   textInput: {
-    backgroundColor: Colors.background,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.medium,
-    padding: Spacing.md,
-    color: Colors.textPrimary,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    color: '#ffffff',
     fontSize: 15,
     minHeight: 100,
     textAlignVertical: 'top',
   },
-  charCount: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: Spacing.xs,
-    textAlign: 'right',
-  },
   actionsContainer: {
-    paddingHorizontal: Spacing.md,
-    gap: Spacing.sm,
+    paddingHorizontal: 16,
+    gap: 12,
   },
   clearButton: {
-    backgroundColor: Colors.cardLight,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.medium,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   clearButtonText: {
-    color: Colors.textSecondary,
+    color: '#94a3b8',
     fontSize: 15,
     fontWeight: '700',
   },
   generateButton: {
-    backgroundColor: Colors.primary,
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.medium,
+    backgroundColor: '#3b82f6',
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    borderRadius: 16,
     alignItems: 'center',
-    ...Shadows.medium,
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
   },
   generateButtonDisabled: {
     opacity: 0.5,
   },
   generateButtonText: {
-    color: Colors.textPrimary,
+    color: '#ffffff',
     fontSize: 17,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
   infoSection: {
-    padding: Spacing.lg,
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.lg,
-    backgroundColor: Colors.secondary,
-    borderRadius: BorderRadius.medium,
+    padding: 24,
+    marginHorizontal: 16,
+    marginTop: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   infoTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+    color: '#ffffff',
+    marginBottom: 8,
   },
   infoText: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: '#94a3b8',
     lineHeight: 22,
   },
 });

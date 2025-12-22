@@ -115,9 +115,9 @@ async function classifyEmotionApi(audioInfo: AudioInfo): Promise<EmotionResult> 
         name: fileName,
       } as any);
       
-      // Add timeout
+      // Add timeout - increased for ML inference
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout for ML
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for ML
       
       const uploadResponse = await fetch(`${classifierConfig.apiUrl}/classify-emotion-upload`, {
         method: 'POST',
@@ -135,7 +135,11 @@ async function classifyEmotionApi(audioInfo: AudioInfo): Promise<EmotionResult> 
       console.log('✅ Audio uploaded and classified with ML model');
       return result;
     } catch (error) {
-      console.error('Error uploading audio:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('⏱️ Audio upload timeout (this is normal if backend is not running)');
+      } else {
+        console.error('Error uploading audio:', error);
+      }
       // Fall back to legacy endpoint
     }
   }
@@ -152,7 +156,7 @@ async function classifyEmotionApi(audioInfo: AudioInfo): Promise<EmotionResult> 
     
     // Add timeout to prevent hanging
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
     
     const response = await fetch(`${classifierConfig.apiUrl}/classify-emotion`, {
       method: 'POST',
@@ -172,8 +176,12 @@ async function classifyEmotionApi(audioInfo: AudioInfo): Promise<EmotionResult> 
     const result = await response.json() as EmotionResult;
     return result;
   } catch (error) {
-    console.error('Error calling emotion API:', error);
-    console.log('Falling back to local stub classifier...');
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log('⏱️ Emotion API timeout (backend may not be running)');
+    } else {
+      console.error('Error calling emotion API:', error);
+    }
+    console.log('✅ Using local stub classifier...');
     // Fallback to stub on error (including timeout)
     const emotion = classifyEmotionStub(audioInfo);
     return {
