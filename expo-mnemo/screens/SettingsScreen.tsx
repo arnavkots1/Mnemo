@@ -127,25 +127,7 @@ export const SettingsScreen: React.FC = () => {
             </View>
           </View>
 
-          <View style={styles.settingCard}>
-            <View style={styles.settingHeader}>
-              <View style={styles.settingIconBadge}>
-                <Text style={styles.settingIcon}>📸</Text>
-              </View>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Photo Analysis</Text>
-                <Text style={styles.settingDescription}>
-                  Use AI to analyze photos
-                </Text>
-              </View>
-              <Switch
-                value={settings.allowPhotoAnalysis}
-                onValueChange={(value) => handleToggle('allowPhotoAnalysis', value)}
-                trackColor={{ false: Colors.border, true: Colors.primary }}
-                thumbColor={Colors.cardLight}
-              />
-            </View>
-          </View>
+          {/* Photo Analysis removed - not in Settings type */}
 
           <View style={styles.settingCard}>
             <View style={styles.settingHeader}>

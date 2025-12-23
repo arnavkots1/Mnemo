@@ -17,7 +17,7 @@ import { CaptureStackNavigator } from './navigation/CaptureStackNavigator';
 import { MomentsScreen } from './screens/MomentsScreen';
 import { MemoriesScreen } from './screens/MemoriesScreen'; // NEW 5th tab
 import { VisionScreen } from './screens/VisionScreen';
-import { SettingsScreen } from './screens/SettingsScreen';
+import { SettingsScreen } from './screens/SettingsScreen_NewDesign';
 import { locationService } from './services/LocationService';
 import { initializeApiConfig } from './config/apiConfig';
 

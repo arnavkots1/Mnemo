@@ -312,6 +312,7 @@ export const MomentsScreen: React.FC = () => {
         horizontal 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filtersContainer}
+        style={styles.filtersScrollView}
       >
         <TouchableOpacity
           style={[styles.filterPill, { height: filterHeight }, filter === 'all' && styles.filterPillActive]}
@@ -451,11 +452,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.textPrimary,
   },
+  filtersScrollView: {
+    marginBottom: 0, // NO margin below filters ScrollView
+    maxHeight: 50, // Fixed height to prevent expansion
+  },
   filtersContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
+    paddingTop: Spacing.sm,
+    paddingBottom: 0, // NO bottom padding - content starts immediately
     gap: Spacing.sm, // more space between filter buttons
-    marginBottom: 0, // NO gap below filters - content starts immediately
   },
   filterPill: {
     paddingHorizontal: 12,
@@ -550,6 +555,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: Colors.textPrimary,
+    marginTop: 0, // NO top margin - starts immediately
     marginBottom: Spacing.sm,
     paddingLeft: Spacing.xs,
   },
