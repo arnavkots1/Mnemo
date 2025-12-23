@@ -15,6 +15,7 @@ import { MemoryProvider, useMemoryContext } from './store/MemoryContext';
 import { SettingsProvider, useSettingsContext } from './store/SettingsContext';
 import { CaptureStackNavigator } from './navigation/CaptureStackNavigator';
 import { MomentsScreen } from './screens/MomentsScreen';
+import { MemoriesScreen } from './screens/MemoriesScreen'; // NEW 5th tab
 import { VisionScreen } from './screens/VisionScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { locationService } from './services/LocationService';
@@ -63,23 +64,23 @@ const AppContent: React.FC = () => {
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: '#FFD4C3',
-          tabBarInactiveTintColor: '#8B8B9E',
+          tabBarActiveTintColor: '#FF6B6B',
+          tabBarInactiveTintColor: '#7A7A8A',
           tabBarStyle: {
             paddingBottom: 8,
             paddingTop: 8,
             height: 68,
-            backgroundColor: '#FFFFFF',
+            backgroundColor: '#1A1A24',
             borderTopWidth: 1,
-            borderTopColor: '#E8E8EE',
-            shadowColor: 'rgba(93, 93, 111, 0.15)',
+            borderTopColor: '#2A2A38',
+            shadowColor: '#000000',
             shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 1,
+            shadowOpacity: 0.5,
             shadowRadius: 8,
             elevation: 8,
           },
           tabBarLabelStyle: {
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: '600',
           },
         }}
@@ -88,7 +89,7 @@ const AppContent: React.FC = () => {
           name="CaptureTab"
           component={CaptureStackNavigator}
           options={{
-            tabBarIcon: ({ color }) => <TabIcon label="H" color={color} />,
+            tabBarIcon: ({ color }) => <TabIcon label="◆" color={color} />,
             tabBarLabel: 'Home',
           }}
         />
@@ -96,15 +97,23 @@ const AppContent: React.FC = () => {
           name="Moments"
           component={MomentsScreen}
           options={{
-            tabBarIcon: ({ color }) => <TabIcon label="M" color={color} />,
+            tabBarIcon: ({ color }) => <TabIcon label="●" color={color} />,
             tabBarLabel: 'Moments',
+          }}
+        />
+        <Tab.Screen
+          name="Memories"
+          component={MemoriesScreen}
+          options={{
+            tabBarIcon: ({ color }) => <TabIcon label="★" color={color} />,
+            tabBarLabel: 'Memories',
           }}
         />
         <Tab.Screen
           name="Vision"
           component={VisionScreen}
           options={{
-            tabBarIcon: ({ color }) => <TabIcon label="V" color={color} />,
+            tabBarIcon: ({ color }) => <TabIcon label="◉" color={color} />,
             tabBarLabel: 'Vision',
           }}
         />
@@ -112,7 +121,7 @@ const AppContent: React.FC = () => {
           name="Settings"
           component={SettingsScreen}
           options={{
-            tabBarIcon: ({ color }) => <TabIcon label="S" color={color} />,
+            tabBarIcon: ({ color }) => <TabIcon label="◈" color={color} />,
             tabBarLabel: 'Settings',
           }}
         />
@@ -136,14 +145,14 @@ export default function App() {
   );
 }
 
-// Simple letter-based tab icon component
+// Geometric symbol-based tab icon component
 const TabIcon: React.FC<{ label: string; color: string }> = ({ label, color }) => {
   return (
     <Text style={{ 
-      fontSize: 20, 
-      fontWeight: '700', 
+      fontSize: 24, 
+      fontWeight: '400', 
       color: color,
-      letterSpacing: 0.5,
+      letterSpacing: 0,
     }}>
       {label}
     </Text>

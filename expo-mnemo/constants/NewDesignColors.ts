@@ -1,88 +1,93 @@
 /**
- * New Design System - Soft Pastel Colors
- * Inspired by modern task management UI
+ * DARK Theme Color Palette
+ * Deep, rich colors with high contrast
  */
 
 export const Colors = {
-  // Primary Background
-  background: '#FFF5F0',        // Soft cream/off-white
-  backgroundDark: '#5C5C6F',    // Dark gray/charcoal for cards
+  // Backgrounds
+  background: '#0A0A0F',        // Almost black
+  backgroundLight: '#12121A',   // Very dark gray
+  cardDark: '#1A1A24',          // Dark card
+  cardLight: '#232330',         // Lighter card
   
-  // Cards & Surfaces
-  cardLight: '#FFFFFF',         // White cards
-  cardDark: '#5C5C6F',          // Dark gray cards
-  cardAccent: '#FFD4C3',        // Soft peach/pink
+  // Primary colors
+  primary: '#FF6B6B',           // Vibrant red
+  primaryLight: '#FF8787',      // Light red
+  secondary: '#4ECDC4',         // Teal accent
+  accent: '#FFE66D',            // Warm yellow
   
-  // Accents & Actions
-  primary: '#FFD4C3',           // Soft peach (buttons, highlights)
-  secondary: '#D4E8F0',         // Soft blue (tags, badges)
-  accent: '#E8E577',            // Soft yellow (progress, highlights)
-  success: '#A8E6A1',           // Soft green
+  // Text colors
+  text: '#FFFFFF',              // Pure white
+  textLight: '#E8E8F0',         // Off white
+  textSecondary: '#B8B8C8',     // Light gray
+  textMuted: '#7A7A8A',         // Muted gray
+  textPrimary: '#FFFFFF',       // White
   
-  // Text
-  textPrimary: '#2D2D3F',       // Dark charcoal
-  textSecondary: '#8B8B9E',     // Medium gray
-  textLight: '#FFFFFF',         // White (on dark cards)
-  textMuted: '#B5B5C5',         // Light gray
+  // UI elements
+  border: '#2A2A38',            // Dark border
+  borderLight: '#3A3A48',       // Lighter border
   
-  // Borders & Dividers
-  border: '#E8E8EE',            // Very light gray
-  borderDark: '#4A4A5C',        // Dark border (on dark cards)
+  // Status colors
+  success: '#4ECDC4',           // Teal
+  warning: '#FFE66D',           // Yellow
+  error: '#FF6B6B',             // Red
   
-  // Additional Colors
-  error: '#FFB4AB',             // Soft red/pink
-  warning: '#FFE5B4',           // Soft orange/peach
-  info: '#B4D4FF',              // Soft blue
-  
-  // Shadows
-  shadow: 'rgba(93, 93, 111, 0.15)',
-  shadowDark: 'rgba(0, 0, 0, 0.25)',
-};
-
-export const Gradients = {
-  primary: ['#FFD4C3', '#FFE4D4'],
-  blue: ['#D4E8F0', '#E4F4F8'],
-  dark: ['#5C5C6F', '#4A4A5C'],
+  // Special colors
+  white: '#FFFFFF',
+  black: '#000000',
+  peach: '#FF6B6B',             // Changed to red
+  peachLight: '#FF8787',        // Light red
+  charcoalDark: '#0A0A0F',      // Almost black
+  charcoalLight: '#1A1A24',     // Dark gray
+  charcoalBorder: '#2A2A38',    // Border
+  cream: '#232330',             // Dark cream
 };
 
 export const Shadows = {
   small: {
-    shadowColor: Colors.shadow,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
     elevation: 2,
   },
   medium: {
-    shadowColor: Colors.shadow,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
     elevation: 4,
   },
   large: {
-    shadowColor: Colors.shadow,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
+    shadowOpacity: 0.7,
     shadowRadius: 16,
     elevation: 8,
+  },
+  button: {
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
 };
 
 export const BorderRadius = {
-  small: 12,
-  medium: 16,
-  large: 24,
-  xlarge: 32,
+  tiny: 4,
+  small: 8,
+  medium: 12,
+  large: 16,
+  extraLarge: 24,
+  round: 999,
 };
 
 export const Spacing = {
-  xs: 4,
-  sm: 8,
+  tiny: 4,
+  xs: 8,
+  sm: 12,
   md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  lg: 20,
+  extraLarge: 32,
 };
-
-

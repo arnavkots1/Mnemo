@@ -1,6 +1,6 @@
 /**
  * VisionScreen - AI-powered memory generation
- * Soft pastel design
+ * Fully responsive with empty state warnings
  */
 
 import React, { useState } from 'react';
@@ -14,6 +14,7 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
@@ -21,9 +22,11 @@ import * as Location from 'expo-location';
 import { createRichMemory, MemoryData } from '../services/memoryAnalyzer';
 import { useMemoryContext } from '../store/MemoryContext';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
+import { DataQualityWarning } from '../components/DataQualityWarning';
 
 export const VisionScreen: React.FC = () => {
   const { addMemory } = useMemoryContext();
+  const dimensions = useWindowDimensions();
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number; placeName?: string } | null>(null);
@@ -31,6 +34,15 @@ export const VisionScreen: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [recordingObject, setRecordingObject] = useState<Audio.Recording | null>(null);
+  const [lastGeneratedMemory, setLastGeneratedMemory] = useState<any>(null);
+  
+  // Responsive sizing
+  const isSmallScreen = dimensions.width < 380;
+  const isTinyScreen = dimensions.width < 350;
+  const titleSize = isTinyScreen ? 24 : isSmallScreen ? 28 : 32;
+  const cardTitleSize = isTinyScreen ? 14 : isSmallScreen ? 15 : 16;
+  const descSize = isTinyScreen ? 11 : isSmallScreen ? 12 : 13;
+  const buttonSize = isTinyScreen ? 14 : isSmallScreen ? 15 : 16;
 
   const handleSelectPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -134,7 +146,11 @@ export const VisionScreen: React.FC = () => {
 
   const handleGenerate = async () => {
     if (!selectedPhoto && !audioUri && !location && !userNote.trim()) {
-      Alert.alert('Add some data', 'Select a photo, record audio, add location, or write a note to generate a memory');
+      Alert.alert(
+        'No Data to Generate',
+        'Add at least one of: photo, voice note, location, or written note to create a memory.',
+        [{ text: 'OK' }]
+      );
       return;
     }
 
@@ -154,9 +170,18 @@ export const VisionScreen: React.FC = () => {
         memoryData
       );
 
-      await addMemory({ ...memory, id: generateUUID() });
+      const fullMemory = { ...memory, id: generateUUID() };
+      await addMemory(fullMemory);
 
-      Alert.alert('Success!', 'Memory created and saved to your timeline');
+      // Store for showing data quality info
+      setLastGeneratedMemory({
+        ...fullMemory,
+        warnings: memory.details?.warnings || [],
+        dataQuality: memory.details?.dataQuality || 'good',
+        dataSources: memory.details?.dataSources || [],
+      });
+
+      Alert.alert('✨ Memory Created!', 'Saved to Moments tab', [{ text: 'OK' }]);
 
       // Reset form
       setSelectedPhoto(null);
@@ -165,7 +190,7 @@ export const VisionScreen: React.FC = () => {
       setUserNote('');
     } catch (error) {
       console.error('Error generating memory:', error);
-      Alert.alert('Error', 'Failed to generate memory');
+      Alert.alert('Error', 'Failed to generate memory. Please try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -196,9 +221,34 @@ export const VisionScreen: React.FC = () => {
         {/* Hero Section */}
         <View style={styles.hero}>
           <Text style={styles.heroText}>
-            Combine photos, voice, and location. Our AI creates beautiful memories with intelligent insights.
+            Combine photos, voice, and location. Gemini AI creates beautiful memories with intelligent insights.
           </Text>
         </View>
+
+        {/* Empty State Warning */}
+        {!hasData && (
+          <View style={styles.emptyWarning}>
+            <Text style={styles.emptyWarningIcon}>⚠️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.emptyWarningTitle, { fontSize: cardTitleSize }]}>
+                No Data Yet
+              </Text>
+              <Text style={[styles.emptyWarningText, { fontSize: descSize }]}>
+                Add at least one input below to generate a memory
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Last Generated Memory Quality */}
+        {lastGeneratedMemory && (
+          <DataQualityWarning
+            quality={lastGeneratedMemory.dataQuality}
+            warnings={lastGeneratedMemory.warnings}
+            dataSources={lastGeneratedMemory.dataSources}
+            style={{ marginHorizontal: Spacing.md, marginBottom: Spacing.md }}
+          />
+        )}
 
         {/* Input Cards */}
         <View style={styles.cardsContainer}>
@@ -396,7 +446,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.lg,
   },
   hero: {
-    padding: Spacing.lg,
+    padding: Spacing.md,
     backgroundColor: Colors.cardDark,
     marginHorizontal: Spacing.md,
     marginTop: Spacing.lg,
