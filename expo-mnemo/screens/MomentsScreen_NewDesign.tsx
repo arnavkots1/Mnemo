@@ -38,7 +38,7 @@ export const MomentsScreen: React.FC = () => {
   
   useFocusEffect(
     useCallback(() => {
-      console.log('🔄 Moments screen refreshing...');
+      console.log('🔄 [MOMENTS] Screen focused - refreshing moments...');
       refreshMemories();
     }, [refreshMemories])
   );
@@ -52,15 +52,17 @@ export const MomentsScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    console.log(`📊 Moments: ${memories.length} memories loaded`);
-    console.log(`📊 Moments: isLoading=${isLoading}, filter="${filter}"`);
+    console.log(`📊 [MOMENTS] State updated: ${memories.length} moment${memories.length === 1 ? '' : 's'} loaded`);
+    console.log(`📊 [MOMENTS] isLoading=${isLoading}, filter="${filter}"`);
     if (memories.length > 0) {
-      console.log(`📊 Moments: Sample memory:`, {
+      console.log(`📊 [MOMENTS] Sample moment:`, {
         id: memories[0].id,
         kind: memories[0].kind,
         summary: memories[0].summary,
         startTime: memories[0].startTime,
       });
+    } else {
+      console.log(`⚠️ [MOMENTS] No moments found in state`);
     }
   }, [memories.length, isLoading, filter]);
 
@@ -75,7 +77,7 @@ export const MomentsScreen: React.FC = () => {
     } else {
       result = memories.filter(m => m.kind === filter);
     }
-    console.log(`🔍 [Moments] Filter: "${filter}", Total: ${memories.length}, Filtered: ${result.length}`);
+    console.log(`🔍 [MOMENTS] Filter: "${filter}", Total moments: ${memories.length}, Filtered: ${result.length}`);
     return result;
   }, [memories, filter]);
 
@@ -154,13 +156,13 @@ export const MomentsScreen: React.FC = () => {
   const groupedMemories = React.useMemo(() => {
     const groups: { [key: string]: MemoryEntry[] } = {};
     
-    console.log(`📦 [Moments] Grouping ${filteredMemories.length} filtered memories...`);
+    console.log(`📦 [MOMENTS] Grouping ${filteredMemories.length} filtered moment${filteredMemories.length === 1 ? '' : 's'}...`);
     
-    filteredMemories.forEach((memory) => {
+    filteredMemories.forEach((moment) => {
       try {
-        const date = new Date(memory.startTime);
+        const date = new Date(moment.startTime);
         if (isNaN(date.getTime())) {
-          console.error(`❌ [Moments] Invalid date for memory ${memory.id}: ${memory.startTime}`);
+          console.error(`❌ [MOMENTS] Invalid date for moment ${moment.id}: ${moment.startTime}`);
           return;
         }
         const dateKey = date.toLocaleDateString('en-US', { 
@@ -172,9 +174,10 @@ export const MomentsScreen: React.FC = () => {
         if (!groups[dateKey]) {
           groups[dateKey] = [];
         }
-        groups[dateKey].push(memory);
+        groups[dateKey].push(moment);
+        console.log(`📅 [MOMENTS] Added moment "${moment.summary}" to group: ${dateKey}`);
       } catch (error) {
-        console.error(`❌ [Moments] Error grouping memory ${memory.id}:`, error);
+        console.error(`❌ [MOMENTS] Error grouping moment ${moment.id}:`, error);
       }
     });
     
@@ -184,7 +187,10 @@ export const MomentsScreen: React.FC = () => {
       return dateB.getTime() - dateA.getTime();
     });
     
-    console.log(`✅ [Moments] Grouped into ${result.length} day groups`);
+    console.log(`✅ [MOMENTS] Grouped into ${result.length} day group${result.length === 1 ? '' : 's'}`);
+    result.forEach(([date, moments]) => {
+      console.log(`   📅 ${date}: ${moments.length} moment${moments.length === 1 ? '' : 's'}`);
+    });
     return result;
   }, [filteredMemories]);
 
@@ -230,31 +236,43 @@ export const MomentsScreen: React.FC = () => {
     }
   };
 
-  const handleDeleteMemory = (memory: MemoryEntry) => {
+  const handleDeleteMemory = (moment: MemoryEntry) => {
+    console.log(`🗑️ [MOMENTS] Delete button pressed for moment: ${moment.id} - "${moment.summary}"`);
     Alert.alert(
-      'Delete Memory',
-      `Are you sure you want to delete "${memory.summary}"?`,
+      'Delete Moment',
+      `Are you sure you want to delete "${moment.summary}"?`,
       [
         {
           text: 'Cancel',
           style: 'cancel',
+          onPress: () => {
+            console.log(`❌ [MOMENTS] Delete cancelled for moment: ${moment.id}`);
+          },
         },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteMemory(memory.id);
-              // Stop audio if this memory was playing
-              if (playingAudioId === memory.id && soundRef.current) {
+              console.log(`🗑️ [MOMENTS] Deleting moment: ${moment.id} - "${moment.summary}"`);
+              await deleteMemory(moment.id);
+              console.log(`✅ [MOMENTS] Moment deleted successfully: ${moment.id}`);
+              
+              // Stop audio if this moment was playing
+              if (playingAudioId === moment.id && soundRef.current) {
+                console.log(`⏹️ [MOMENTS] Stopping audio playback for deleted moment`);
                 await soundRef.current.stopAsync();
                 await soundRef.current.unloadAsync();
                 soundRef.current = null;
                 setPlayingAudioId(null);
               }
+              
+              // Refresh to update the count
+              await refreshMemories();
+              console.log(`🔄 [MOMENTS] Refreshed moments list after deletion`);
             } catch (error) {
-              console.error('Error deleting memory:', error);
-              Alert.alert('Error', 'Failed to delete memory');
+              console.error(`❌ [MOMENTS] Error deleting moment ${moment.id}:`, error);
+              Alert.alert('Error', 'Failed to delete moment');
             }
           },
         },
@@ -262,9 +280,9 @@ export const MomentsScreen: React.FC = () => {
     );
   };
 
-  const playAudio = async (memory: MemoryEntry) => {
+  const playAudio = async (moment: MemoryEntry) => {
     try {
-      if (playingAudioId === memory.id) {
+      if (playingAudioId === moment.id) {
         if (soundRef.current) {
           await soundRef.current.stopAsync();
           await soundRef.current.unloadAsync();
@@ -280,9 +298,9 @@ export const MomentsScreen: React.FC = () => {
         soundRef.current = null;
       }
 
-      if (!memory.details?.audioPath) return;
+      if (!moment.details?.audioPath) return;
       
-      const permanentPath = await getAudioUri(memory.details.audioPath);
+      const permanentPath = await getAudioUri(moment.details.audioPath);
       if (!permanentPath) return;
 
       const fileInfo = await FileSystem.getInfoAsync(permanentPath);
@@ -297,7 +315,7 @@ export const MomentsScreen: React.FC = () => {
       );
       
       soundRef.current = sound;
-      setPlayingAudioId(memory.id);
+      setPlayingAudioId(moment.id);
 
       sound.setOnPlaybackStatusUpdate((status) => {
         if ('didJustFinish' in status && status.didJustFinish) {
@@ -312,31 +330,32 @@ export const MomentsScreen: React.FC = () => {
     }
   };
 
-  const renderMemoryCard = (memory: MemoryEntry) => {
-    const time = new Date(memory.startTime).toLocaleTimeString('en-US', {
+  const renderMemoryCard = (moment: MemoryEntry) => {
+    console.log(`🎨 [MOMENTS] Rendering moment card: ${moment.id} - "${moment.summary}"`);
+    const time = new Date(moment.startTime).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
     });
 
     return (
-      <View key={memory.id} style={styles.memoryCard}>
+      <View key={moment.id} style={styles.memoryCard}>
         {/* Memory Type Icon */}
         <View style={styles.memoryIconBadge}>
           <Text style={styles.memoryIcon}>
-            {memory.kind === 'photo' ? '📸' : 
-             memory.kind === 'emotional' ? '🎙️' : 
-             memory.kind === 'context' ? '📍' : '✨'}
+            {moment.kind === 'photo' ? '📸' : 
+             moment.kind === 'emotional' ? '🎙️' : 
+             moment.kind === 'context' ? '📍' : '✨'}
           </Text>
         </View>
 
-        {/* Memory Content */}
+        {/* Moment Content */}
         <View style={styles.memoryContent}>
           {/* Header */}
           <View style={styles.memoryHeader}>
             <View style={styles.memoryTitleContainer}>
               <Text style={styles.memoryTitle} numberOfLines={2}>
-                {memory.summary}
+                {moment.summary}
               </Text>
             </View>
             <View style={styles.memoryHeaderActions}>
@@ -345,7 +364,7 @@ export const MomentsScreen: React.FC = () => {
               </View>
               <TouchableOpacity
                 style={styles.deleteButton}
-                onPress={() => handleDeleteMemory(memory)}
+                onPress={() => handleDeleteMemory(moment)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Text style={styles.deleteButtonText}>×</Text>
@@ -354,39 +373,39 @@ export const MomentsScreen: React.FC = () => {
           </View>
 
           {/* Description */}
-          {memory.details?.description && (
+          {moment.details?.description && (
             <Text style={styles.memoryDescription} numberOfLines={2}>
-              {String(memory.details.description)}
+              {String(moment.details.description)}
             </Text>
           )}
 
           {/* Photo */}
-          {memory.kind === 'photo' && memory.details?.imagePath && (
+          {moment.kind === 'photo' && moment.details?.imagePath && (
             <Image
-              source={{ uri: memory.details.imagePath, cache: 'force-cache' }}
+              source={{ uri: moment.details.imagePath, cache: 'force-cache' }}
               style={styles.memoryImage}
               resizeMode="cover"
             />
           )}
 
           {/* Audio Player */}
-          {memory.kind === 'emotional' && memory.details?.audioPath && (
+          {moment.kind === 'emotional' && moment.details?.audioPath && (
             <TouchableOpacity 
               style={styles.audioPlayer}
-              onPress={() => playAudio(memory)}
+              onPress={() => playAudio(moment)}
             >
               <View style={styles.audioIcon}>
                 <Text style={styles.audioIconText}>
-                  {playingAudioId === memory.id ? '⏸' : '▶'}
+                  {playingAudioId === moment.id ? '⏸' : '▶'}
                 </Text>
               </View>
               <View style={styles.audioInfo}>
                 <Text style={styles.audioLabel}>
-                  {playingAudioId === memory.id ? 'Playing...' : 'Tap to play'}
+                  {playingAudioId === moment.id ? 'Playing...' : 'Tap to play'}
                 </Text>
-                {memory.details.emotion && (
+                {moment.details.emotion && (
                   <Text style={styles.emotionText}>
-                    {memory.details.emotion}
+                    {moment.details.emotion}
                   </Text>
                 )}
               </View>
@@ -394,16 +413,16 @@ export const MomentsScreen: React.FC = () => {
           )}
 
           {/* Location */}
-          {memory.details?.locationName && (
+          {moment.details?.locationName && (
             <View style={styles.locationBadge}>
-              <Text style={styles.locationText}>📍 {memory.details.locationName}</Text>
+              <Text style={styles.locationText}>📍 {moment.details.locationName}</Text>
             </View>
           )}
 
           {/* Tags */}
-          {memory.details?.tags && memory.details.tags.length > 0 && (
+          {moment.details?.tags && moment.details.tags.length > 0 && (
             <View style={styles.tagsContainer}>
-              {memory.details.tags.slice(0, 3).map((tag: string, index: number) => (
+              {moment.details.tags.slice(0, 3).map((tag: string, index: number) => (
                 <View key={index} style={styles.tag}>
                   <Text style={styles.tagText}>{tag}</Text>
                 </View>
@@ -422,7 +441,7 @@ export const MomentsScreen: React.FC = () => {
         <View>
           <Text style={styles.headerTitle}>Your Moments</Text>
           <Text style={styles.headerSubtitle}>
-            {filteredMemories.length} {filteredMemories.length === 1 ? 'memory' : 'memories'}
+            {filteredMemories.length} {filteredMemories.length === 1 ? 'moment' : 'moments'}
             {filter !== 'all' && ` (${memories.length} total)`}
           </Text>
         </View>
@@ -506,7 +525,7 @@ export const MomentsScreen: React.FC = () => {
           }
           
           if (groupedMemories.length === 0) {
-            console.log(`⚠️ [Moments] No grouped memories to display. Filter: "${filter}", Filtered: ${filteredMemories.length}, Total: ${memories.length}, isLoading: ${isLoading}`);
+            console.log(`⚠️ [MOMENTS] No grouped moments to display. Filter: "${filter}", Filtered: ${filteredMemories.length}, Total: ${memories.length}, isLoading: ${isLoading}`);
             return (
           <View style={styles.emptyContainer}>
             {filter === 'context_log' ? (
@@ -587,15 +606,24 @@ export const MomentsScreen: React.FC = () => {
             );
           }
           
-          console.log(`✅ [Moments] Rendering ${groupedMemories.length} day groups with ${filteredMemories.length} memories`);
+          console.log(`✅ [MOMENTS] Rendering ${groupedMemories.length} day group${groupedMemories.length === 1 ? '' : 's'} with ${filteredMemories.length} moment${filteredMemories.length === 1 ? '' : 's'}`);
+          groupedMemories.forEach(([date, dayMoments]) => {
+            console.log(`   🎨 [MOMENTS] Rendering group "${date}" with ${dayMoments.length} moment${dayMoments.length === 1 ? '' : 's'}`);
+          });
           return (
             <>
-              {groupedMemories.map(([date, dayMemories]) => (
-                <View key={date} style={styles.dayGroup}>
-                  <Text style={styles.dateHeader}>{date}</Text>
-                  {dayMemories.map(renderMemoryCard)}
-                </View>
-              ))}
+              {groupedMemories.map(([date, dayMoments]) => {
+                console.log(`🎨 [MOMENTS] Rendering day group "${date}" with ${dayMoments.length} moment${dayMoments.length === 1 ? '' : 's'}`);
+                return (
+                  <View key={date} style={styles.dayGroup}>
+                    <Text style={styles.dateHeader}>{date}</Text>
+                    {dayMoments.map((moment) => {
+                      console.log(`   🎨 [MOMENTS] Rendering moment: ${moment.id} - "${moment.summary}"`);
+                      return renderMemoryCard(moment);
+                    })}
+                  </View>
+                );
+              })}
             </>
           );
         })()}
@@ -783,6 +811,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.large,
     padding: Spacing.md,
     marginBottom: Spacing.md,
+    minHeight: 80, // Ensure minimum height for visibility
     ...Shadows.small,
   },
   memoryIconBadge: {

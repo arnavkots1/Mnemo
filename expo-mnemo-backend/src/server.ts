@@ -27,6 +27,15 @@ app.use(cors()); // Allow requests from Expo app
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For file uploads
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`📥 [Server] ${req.method} ${req.path}`);
+  if (req.method === 'POST' && req.path.includes('daily-summaries')) {
+    console.log(`📥 [Server] Daily summaries request from ${req.ip || 'unknown'}`);
+  }
+  next();
+});
+
 // Import memory analysis routes
 import memoryAnalysisRouter from './routes/memoryAnalysis';
 import dailySummariesRouter from './routes/dailySummaries';
@@ -47,6 +56,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Mnemo backend server running on http://0.0.0.0:${PORT}`);
   console.log(`📡 Emotion API: http://localhost:${PORT}/api/classify-emotion`);
   console.log(`🖼️  Image API: http://localhost:${PORT}/api/analyze-image`);
-  console.log(`🌐 Accessible from network at: http://192.168.88.10:${PORT}`);
+  console.log(`🌐 Accessible from network at: http://172.20.10.6:${PORT}`);
+  console.log(`   ⚠️  If this IP is wrong, update apiConfig.ts in expo-mnemo with your actual IP`);
+  console.log(`   💡 Find your IP with: ipconfig (Windows) or ifconfig (Mac/Linux)`);
 });
 

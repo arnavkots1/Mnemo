@@ -19,7 +19,8 @@ import {
 import { useMemoryContext } from '../store/MemoryContext';
 import { MemoryEntry } from '../types/MemoryEntry';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
-import { API_CONFIG } from '../config/apiConfig';
+import { API_CONFIG, checkBackendHealth } from '../config/apiConfig';
+import { testBackendConnection, getNetworkDiagnostics } from '../utils/networkDebug';
 
 interface DailySummary {
   date: string;
@@ -30,10 +31,15 @@ interface DailySummary {
 }
 
 export const MemoriesScreen: React.FC = () => {
-  const { memories } = useMemoryContext();
+  const { memories: moments } = useMemoryContext(); // NOTE: These are MOMENTS, not memories
   const [dailySummaries, setDailySummaries] = useState<DailySummary[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const dimensions = useWindowDimensions();
+  
+  useEffect(() => {
+    console.log(`📊 [MEMORIES] Screen loaded with ${moments.length} moment${moments.length === 1 ? '' : 's'} available for summary generation`);
+    console.log(`📊 [MEMORIES] Current summaries: ${dailySummaries.length}`);
+  }, [moments.length, dailySummaries.length]);
   
   const handleDeleteSummary = (index: number) => {
     Alert.alert(
@@ -102,7 +108,7 @@ export const MemoriesScreen: React.FC = () => {
       
       // Auto-generate at 11:55 PM
       if (hour === 23 && minute === 55) {
-        console.log('🌙 End of day - auto-generating memory summary');
+        console.log('🌙 [MEMORIES] End of day - auto-generating daily summaries');
         generateDailySummaries();
         // TODO: Save to AsyncStorage for persistence
       }
@@ -111,33 +117,58 @@ export const MemoriesScreen: React.FC = () => {
     // Check every minute
     const interval = setInterval(checkEndOfDay, 60000);
     return () => clearInterval(interval);
-  }, [memories]);
+  }, [moments]);
   
   const generateDailySummaries = async () => {
     try {
-      console.log('🚀 [Memories] Calling backend API for daily summaries...');
+      // First check if backend is reachable
+      console.log(`🔍 [MEMORIES] Checking backend health...`);
+      const isHealthy = await checkBackendHealth();
+      if (!isHealthy) {
+        console.warn(`⚠️ [MEMORIES] Backend health check failed - backend may be unreachable`);
+        console.warn(`   Using local fallback instead`);
+        generateLocalSummaries();
+        return;
+      }
+      console.log(`✅ [MEMORIES] Backend is reachable`);
+      
+      const apiUrl = `${API_CONFIG.BASE_URL}/api/memory/daily-summaries`;
+      console.log(`🚀 [MEMORIES] Calling backend API for daily summaries from ${moments.length} moment${moments.length === 1 ? '' : 's'}...`);
+      console.log(`🌐 [MEMORIES] API URL: ${apiUrl}`);
+      console.log(`🌐 [MEMORIES] API_CONFIG.BASE_URL: ${API_CONFIG.BASE_URL}`);
+      console.log(`📤 [MEMORIES] Sending ${moments.length} moment${moments.length === 1 ? '' : 's'} to backend`);
       
       // Call backend API for AI-powered summaries
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for Gemini
+      const timeoutId = setTimeout(() => {
+        console.error(`⏱️ [MEMORIES] Request timeout after 60s - aborting`);
+        controller.abort();
+      }, 60000); // 60s timeout for Gemini
       
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/memory/daily-summaries`, {
+      const requestBody = JSON.stringify({ memories: moments });
+      console.log(`📦 [MEMORIES] Request body size: ${requestBody.length} bytes`);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ memories }),
+        body: requestBody,
         signal: controller.signal,
       });
       
       clearTimeout(timeoutId);
       
+      console.log(`📥 [MEMORIES] Response received: ${response.status} ${response.statusText}`);
+      
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`❌ [MEMORIES] API error ${response.status}: ${errorText}`);
+        throw new Error(`API error: ${response.status} - ${errorText}`);
       }
       
       const result = await response.json();
-      console.log(`✅ [Memories] Backend generated ${result.summaries?.length || 0} summaries`);
+      console.log(`✅ [MEMORIES] Backend generated ${result.summaries?.length || 0} daily summar${result.summaries?.length === 1 ? 'y' : 'ies'}`);
       
       // Convert backend format to local format
       const summaries: DailySummary[] = (result.summaries || []).map((s: any) => ({
@@ -145,44 +176,64 @@ export const MemoriesScreen: React.FC = () => {
         count: s.count,
         summary: s.summary,
         highlights: s.highlights || [],
-        memories: memories.filter(m => {
-          const memoryDate = new Date(m.startTime).toDateString();
-          return memoryDate === s.date;
+        memories: moments.filter(m => {
+          const momentDate = new Date(m.startTime).toDateString();
+          return momentDate === s.date;
         }),
       }));
       
       setDailySummaries(summaries);
+      console.log(`📊 [MEMORIES] Set ${summaries.length} daily summar${summaries.length === 1 ? 'y' : 'ies'} in state`);
     } catch (error) {
-      console.error('❌ [Memories] Error calling backend, using local fallback:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error(`⏱️ [MEMORIES] Request aborted (timeout or cancelled)`);
+        console.error(`   This usually means the backend is unreachable or taking too long`);
+        console.error(`   Check: 1) Backend is running on ${API_CONFIG.BASE_URL}`);
+        console.error(`         2) Phone and computer are on same network`);
+        console.error(`         3) Firewall allows connections on port 3000`);
+        console.error(`         4) Backend IP matches: ${API_CONFIG.BASE_URL}`);
+      } else {
+        console.error(`❌ [MEMORIES] Error calling backend:`, error);
+        if (error instanceof Error) {
+          console.error(`   Error message: ${error.message}`);
+          console.error(`   Error name: ${error.name}`);
+        }
+      }
       // Fallback to local generation
+      console.log(`📝 [MEMORIES] Falling back to local summary generation`);
       generateLocalSummaries();
     }
   };
   
   const generateLocalSummaries = () => {
-    // Group memories by day
+    console.log(`📝 [MEMORIES] Generating local summaries from ${moments.length} moment${moments.length === 1 ? '' : 's'}...`);
+    // Group moments by day
     const grouped = new Map<string, MemoryEntry[]>();
     
-    memories.forEach(memory => {
-      const date = new Date(memory.startTime).toDateString();
+    moments.forEach(moment => {
+      const date = new Date(moment.startTime).toDateString();
       if (!grouped.has(date)) {
         grouped.set(date, []);
       }
-      grouped.get(date)!.push(memory);
+      grouped.get(date)!.push(moment);
     });
+    
+    console.log(`📦 [MEMORIES] Grouped into ${grouped.size} day${grouped.size === 1 ? '' : 's'}`);
     
     // Generate summaries for each day
     const summaries: DailySummary[] = [];
     
-    for (const [date, dayMemories] of grouped.entries()) {
-      const summary = generateSummaryForDay(dayMemories, date);
+    for (const [date, dayMoments] of grouped.entries()) {
+      const summary = generateSummaryForDay(dayMoments, date);
       summaries.push(summary);
+      console.log(`   📅 [MEMORIES] Generated summary for ${date}: ${dayMoments.length} moment${dayMoments.length === 1 ? '' : 's'}`);
     }
     
     // Sort by date (newest first)
     summaries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     
     setDailySummaries(summaries);
+    console.log(`✅ [MEMORIES] Set ${summaries.length} local summar${summaries.length === 1 ? 'y' : 'ies'} in state`);
   };
   
   const generateSummaryForDay = (dayMemories: MemoryEntry[], date: string): DailySummary => {
@@ -225,17 +276,48 @@ export const MemoriesScreen: React.FC = () => {
   };
   
   const handleGenerateNow = async () => {
-    if (memories.length === 0) {
-      Alert.alert('No Moments Yet', 'Add some moments first, then generate memories from them.');
+    console.log(`🎯 [MEMORIES] Generate Now button pressed. Available moments: ${moments.length}`);
+    if (moments.length === 0) {
+      console.log(`⚠️ [MEMORIES] No moments available for summary generation`);
+      Alert.alert('No Moments Yet', 'Add some moments first, then generate daily summaries from them.');
       return;
+    }
+    
+    // First, test backend connection with detailed diagnostics
+    console.log(`🔍 [MEMORIES] Testing backend connection before generating...`);
+    const diagnostics = getNetworkDiagnostics();
+    console.log(`📊 [MEMORIES] Network diagnostics:`, JSON.stringify(diagnostics, null, 2));
+    
+    const connectionTest = await testBackendConnection();
+    if (!connectionTest.success) {
+      const errorMsg = connectionTest.error || 'Unknown error';
+      console.error(`❌ [MEMORIES] Backend connection test failed:`, errorMsg);
+      Alert.alert(
+        'Backend Unreachable',
+        `Cannot connect to backend.\n\n` +
+        `URL: ${diagnostics.baseUrl}\n` +
+        `Error: ${errorMsg}\n\n` +
+        `Troubleshooting:\n` +
+        `1. Backend running? Check terminal\n` +
+        `2. Same Wi-Fi network?\n` +
+        `3. IP correct? Expected: 192.168.88.10\n` +
+        `4. Firewall allows port 3000?\n` +
+        `5. Try: ipconfig to check your IP\n\n` +
+        `Using local fallback instead.`,
+        [{ text: 'OK' }]
+      );
+    } else {
+      console.log(`✅ [MEMORIES] Backend connection test successful (${connectionTest.details.responseTime}ms)`);
     }
     
     setIsGenerating(true);
     try {
       await generateDailySummaries();
-      Alert.alert('✨ Generated!', `Created summaries from ${memories.length} moment${memories.length === 1 ? '' : 's'}`);
+      console.log(`✅ [MEMORIES] Successfully generated summaries`);
+      Alert.alert('✨ Generated!', `Created daily summaries from ${moments.length} moment${moments.length === 1 ? '' : 's'}`);
       // TODO: Save to AsyncStorage for persistence
     } catch (error) {
+      console.error(`❌ [MEMORIES] Error generating summaries:`, error);
       Alert.alert('Error', 'Failed to generate summaries');
     } finally {
       setIsGenerating(false);

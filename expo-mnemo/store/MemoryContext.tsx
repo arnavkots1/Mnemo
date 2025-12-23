@@ -1,9 +1,13 @@
 /**
- * MemoryContext - React Context for global memory state management
+ * MemoryContext - React Context for global MOMENTS state management
+ * 
+ * NOTE: This manages MOMENTS (individual entries), not MEMORIES (daily summaries)
+ * - Moments = individual memory entries (photos, voice notes, locations)
+ * - Memories = AI-generated daily summaries (managed separately in MemoriesScreen)
  * 
  * Provides:
- * - memories state and setMemories updater
- * - Convenience methods to add/update/delete via the store
+ * - moments state and setMoments updater
+ * - Convenience methods to add/update/delete moments via the store
  * - Automatic sync with MemoryStore
  * - Easy subscription for screens
  */
@@ -27,15 +31,15 @@ if (!loadMemories || !addMemoryToStore || !saveMemories) {
 }
 
 interface MemoryContextType {
-  memories: MemoryEntry[];
+  memories: MemoryEntry[]; // NOTE: These are MOMENTS (individual entries), kept as 'memories' for backward compatibility
   setMemories: React.Dispatch<React.SetStateAction<MemoryEntry[]>>;
-  addMemory: (memory: MemoryEntry) => Promise<void>;
-  updateMemory: (memory: MemoryEntry) => Promise<void>;
-  deleteMemory: (id: string) => Promise<void>;
-  refreshMemories: () => Promise<void>;
-  getMemoriesForDay: (date: Date) => Promise<MemoryEntry[]>;
-  getRecentMoments: (limit: number) => Promise<MemoryEntry[]>;
-  deleteAllMemories: () => Promise<void>;
+  addMemory: (moment: MemoryEntry) => Promise<void>; // Adds a MOMENT
+  updateMemory: (moment: MemoryEntry) => Promise<void>; // Updates a MOMENT
+  deleteMemory: (id: string) => Promise<void>; // Deletes a MOMENT
+  refreshMemories: () => Promise<void>; // Refreshes MOMENTS from store
+  getMemoriesForDay: (date: Date) => Promise<MemoryEntry[]>; // Gets MOMENTS for a day
+  getRecentMoments: (limit: number) => Promise<MemoryEntry[]>; // Gets recent MOMENTS
+  deleteAllMemories: () => Promise<void>; // Deletes all MOMENTS
   isLoading: boolean;
 }
 
@@ -49,16 +53,17 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isLoading, setIsLoading] = useState(true);
 
   /**
-   * Load memories from store on mount
+   * Load moments from store on mount
    */
   useEffect(() => {
-    const loadInitialMemories = async () => {
+    const loadInitialMoments = async () => {
       try {
         setIsLoading(true);
-        const loadedMemories = await loadMemories();
-        setMemories(loadedMemories);
+        const loadedMoments = await loadMemories();
+        console.log(`📊 [MEMORY_CONTEXT] Loaded ${loadedMoments.length} moment${loadedMoments.length === 1 ? '' : 's'} on mount`);
+        setMemories(loadedMoments);
       } catch (error) {
-        console.error('Error loading initial memories:', error);
+        console.error('❌ [MEMORY_CONTEXT] Error loading initial moments:', error);
         // Set empty array on error to prevent app crash
         setMemories([]);
       } finally {
@@ -66,22 +71,22 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
     };
 
-    loadInitialMemories();
+    loadInitialMoments();
   }, []);
 
   /**
-   * Add a new memory
+   * Add a new MOMENT (not a memory summary)
    */
-  const addMemory = useCallback(async (memory: MemoryEntry) => {
+  const addMemory = useCallback(async (moment: MemoryEntry) => {
     try {
-      console.log(`➕ MemoryContext: Adding memory ${memory.id}`);
-      await addMemoryToStore(memory);
-      console.log(`✅ MemoryContext: Memory saved to store`);
+      console.log(`➕ [MEMORY_CONTEXT] Adding moment: ${moment.id} - "${moment.summary}"`);
+      await addMemoryToStore(moment);
+      console.log(`✅ [MEMORY_CONTEXT] Moment saved to store`);
       
       // Update local state immediately for responsive UI
       setMemories((prev) => {
-        const updated = [...prev, memory];
-        console.log(`📊 MemoryContext: State updated (${updated.length} total)`);
+        const updated = [...prev, moment];
+        console.log(`📊 [MEMORY_CONTEXT] State updated: ${updated.length} total moment${updated.length === 1 ? '' : 's'}`);
         return updated;
       });
       
@@ -89,74 +94,89 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Also refresh from store to ensure consistency
-      const updatedMemories = await loadMemories();
-      setMemories(updatedMemories);
-      console.log(`🔄 MemoryContext: Verified state (${updatedMemories.length} total)`);
+      const updatedMoments = await loadMemories();
+      setMemories(updatedMoments);
+      console.log(`🔄 [MEMORY_CONTEXT] Verified state: ${updatedMoments.length} total moment${updatedMoments.length === 1 ? '' : 's'}`);
     } catch (error) {
-      console.error('❌ MemoryContext: Error adding memory:', error);
+      console.error(`❌ [MEMORY_CONTEXT] Error adding moment ${moment.id}:`, error);
       // Still update local state even if store save fails
-      setMemories((prev) => [...prev, memory]);
+      setMemories((prev) => [...prev, moment]);
       // Don't throw - gracefully handle error
     }
   }, []);
 
   /**
-   * Update an existing memory
+   * Update an existing MOMENT
    */
-  const updateMemory = useCallback(async (memory: MemoryEntry) => {
+  const updateMemory = useCallback(async (moment: MemoryEntry) => {
     try {
-      await updateMemoryInStore(memory);
+      console.log(`🔄 [MEMORY_CONTEXT] Updating moment: ${moment.id}`);
+      await updateMemoryInStore(moment);
       // Refresh from store to ensure consistency
-      const updatedMemories = await loadMemories();
-      setMemories(updatedMemories);
+      const updatedMoments = await loadMemories();
+      setMemories(updatedMoments);
+      console.log(`✅ [MEMORY_CONTEXT] Moment updated: ${updatedMoments.length} total`);
     } catch (error) {
-      console.error('Error updating memory:', error);
+      console.error(`❌ [MEMORY_CONTEXT] Error updating moment ${moment.id}:`, error);
       // Update local state even if store update fails
-      setMemories((prev) => prev.map(m => m.id === memory.id ? memory : m));
+      setMemories((prev) => prev.map(m => m.id === moment.id ? moment : m));
       // Don't throw - gracefully handle error
     }
   }, []);
 
   /**
-   * Delete a memory by ID
+   * Delete a MOMENT by ID
    */
   const deleteMemory = useCallback(async (id: string) => {
     try {
-      const updatedMemories = memories.filter(m => m.id !== id);
-      await saveMemories(updatedMemories);
-      setMemories(updatedMemories);
+      const momentToDelete = memories.find(m => m.id === id);
+      console.log(`🗑️ [MEMORY_CONTEXT] Deleting moment: ${id}${momentToDelete ? ` - "${momentToDelete.summary}"` : ''}`);
+      
+      const updatedMoments = memories.filter(m => m.id !== id);
+      await saveMemories(updatedMoments);
+      setMemories(updatedMoments);
+      console.log(`✅ [MEMORY_CONTEXT] Moment deleted: ${updatedMoments.length} moment${updatedMoments.length === 1 ? '' : 's'} remaining`);
     } catch (error) {
-      console.error('Error deleting memory:', error);
+      console.error(`❌ [MEMORY_CONTEXT] Error deleting moment ${id}:`, error);
       // Update local state even if store save fails
-      setMemories((prev) => prev.filter(m => m.id !== id));
+      setMemories((prev) => {
+        const filtered = prev.filter(m => m.id !== id);
+        console.log(`🔄 [MEMORY_CONTEXT] Local state updated: ${filtered.length} moment${filtered.length === 1 ? '' : 's'} remaining`);
+        return filtered;
+      });
       // Don't throw - gracefully handle error
     }
   }, [memories]);
 
   /**
-   * Refresh memories from store
+   * Refresh MOMENTS from store
    */
   const refreshMemories = useCallback(async () => {
     try {
-      console.log('🔄 MemoryContext: Refreshing memories from store...');
-      const loadedMemories = await loadMemories();
-      console.log(`📊 MemoryContext: Loaded ${loadedMemories.length} memories from store`);
-      setMemories(loadedMemories);
-      console.log(`✅ MemoryContext: Updated state with ${loadedMemories.length} memories`);
+      console.log('🔄 [MEMORY_CONTEXT] Refreshing moments from store...');
+      const loadedMoments = await loadMemories();
+      console.log(`📊 [MEMORY_CONTEXT] Loaded ${loadedMoments.length} moment${loadedMoments.length === 1 ? '' : 's'} from store`);
+      setMemories(loadedMoments);
+      console.log(`✅ [MEMORY_CONTEXT] Updated state with ${loadedMoments.length} moment${loadedMoments.length === 1 ? '' : 's'}`);
+      if (loadedMoments.length > 0) {
+        console.log(`   📋 [MEMORY_CONTEXT] Sample moments:`, loadedMoments.slice(0, 3).map(m => ({ id: m.id, summary: m.summary, kind: m.kind })));
+      }
     } catch (error) {
-      console.error('❌ MemoryContext: Error refreshing memories:', error);
-      // Don't throw - gracefully handle error, keep existing memories
+      console.error('❌ [MEMORY_CONTEXT] Error refreshing moments:', error);
+      // Don't throw - gracefully handle error, keep existing moments
     }
   }, []);
 
   /**
-   * Get memories for a specific day
+   * Get MOMENTS for a specific day
    */
   const getMemoriesForDay = useCallback(async (date: Date): Promise<MemoryEntry[]> => {
     try {
-      return await getMemoriesForDayFromStore(date);
+      const moments = await getMemoriesForDayFromStore(date);
+      console.log(`📅 [MEMORY_CONTEXT] Got ${moments.length} moment${moments.length === 1 ? '' : 's'} for ${date.toDateString()}`);
+      return moments;
     } catch (error) {
-      console.error('Error getting memories for day:', error);
+      console.error(`❌ [MEMORY_CONTEXT] Error getting moments for day:`, error);
       return []; // Return empty array on error
     }
   }, []);
@@ -174,28 +194,29 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   /**
-   * Delete all memories
+   * Delete all MOMENTS
    */
   const deleteAllMemories = useCallback(async () => {
     try {
-      console.log('🗑️ MemoryContext: Deleting all memories...');
+      const countBefore = memories.length;
+      console.log(`🗑️ [MEMORY_CONTEXT] Deleting all ${countBefore} moment${countBefore === 1 ? '' : 's'}...`);
       await deleteAllMemoriesFromStore();
       setMemories([]);
-      console.log('✅ MemoryContext: All memories deleted and state cleared');
+      console.log(`✅ [MEMORY_CONTEXT] All ${countBefore} moment${countBefore === 1 ? '' : 's'} deleted and state cleared`);
       
       // Verify deletion worked
-      const remainingMemories = await loadMemories();
-      console.log(`📊 MemoryContext: Verification - ${remainingMemories.length} memories remain in store`);
-      if (remainingMemories.length > 0) {
-        console.warn('⚠️ MemoryContext: Some memories still exist after deletion!');
+      const remainingMoments = await loadMemories();
+      console.log(`📊 [MEMORY_CONTEXT] Verification - ${remainingMoments.length} moment${remainingMoments.length === 1 ? '' : 's'} remain in store`);
+      if (remainingMoments.length > 0) {
+        console.warn(`⚠️ [MEMORY_CONTEXT] Some moments still exist after deletion!`);
       }
     } catch (error) {
-      console.error('❌ MemoryContext: Error deleting all memories:', error);
+      console.error('❌ [MEMORY_CONTEXT] Error deleting all moments:', error);
       // Still clear local state even if store delete fails
       setMemories([]);
       // Don't throw - gracefully handle error
     }
-  }, []);
+  }, [memories]);
 
   const value: MemoryContextType = {
     memories,

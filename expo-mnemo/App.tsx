@@ -19,7 +19,7 @@ import { MemoriesScreen } from './screens/MemoriesScreen';
 import { VisionScreen } from './screens/VisionScreen_NewDesign';
 import { SettingsScreen } from './screens/SettingsScreen_NewDesign';
 import { locationService } from './services/LocationService';
-import { initializeApiConfig } from './config/apiConfig';
+import { initializeApiConfig, API_CONFIG } from './config/apiConfig';
 
 const Tab = createBottomTabNavigator();
 

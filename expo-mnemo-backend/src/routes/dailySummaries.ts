@@ -24,16 +24,21 @@ interface MemoryInput {
  */
 router.post('/daily-summaries', async (req, res) => {
   try {
+    console.log(`📥 [Daily Summaries] POST /api/memory/daily-summaries received`);
+    console.log(`📥 [Daily Summaries] Request headers:`, JSON.stringify(req.headers, null, 2));
+    console.log(`📥 [Daily Summaries] Request body keys:`, Object.keys(req.body || {}));
+    
     const { memories } = req.body as { memories: MemoryInput[] };
     
     if (!memories || !Array.isArray(memories) || memories.length === 0) {
+      console.warn(`⚠️ [Daily Summaries] No memories provided in request`);
       return res.status(400).json({
         error: 'No memories provided',
         summaries: [],
       });
     }
 
-    console.log(`[Daily Summaries] Generating summaries for ${memories.length} memories`);
+    console.log(`🚀 [Daily Summaries] Generating summaries for ${memories.length} moment${memories.length === 1 ? '' : 's'}`);
 
     // Group memories by day
     const grouped = new Map<string, MemoryInput[]>();
