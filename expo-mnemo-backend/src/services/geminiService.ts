@@ -1,10 +1,16 @@
 /**
  * Gemini Service - Uses Google Gemini Vision API for image analysis
  * 
- * Free tier: 15 requests per minute, 1500 requests per day
+ * RATE LIMITING (Free Tier):
+ * - Model: gemini-2.5-flash
+ * - RPM: 5 requests/minute (using 4/min with buffer)
+ * - TPM: 250K tokens/minute (not tracked, but requests are small)
+ * - Daily: Conservative limit of 500 requests/day
+ * 
  * Get API key: https://aistudio.google.com/app/apikey
  * 
- * Rate limiting: 10 requests per minute, 1000 requests per day (conservative)
+ * Rate limits are enforced before each API call. When exceeded, returns null
+ * and falls back to local stub generation.
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -15,9 +21,12 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 let genAI: GoogleGenerativeAI | null = null;
 let model: any = null;
 
-// Rate limiting
-const RATE_LIMIT_PER_MINUTE = 10;
-const RATE_LIMIT_PER_DAY = 1000;
+// Rate limiting - Free tier limits for gemini-2.5-flash:
+// - RPM: 5 requests/minute
+// - TPM: 250K tokens/minute (tracked separately)
+// Using conservative limits with buffer to stay within free tier
+const RATE_LIMIT_PER_MINUTE = 4; // Free tier: 5/min, using 4 to leave buffer
+const RATE_LIMIT_PER_DAY = 500; // Conservative daily limit for free tier
 const requestTimestamps: number[] = [];
 let dailyRequestCount = 0;
 let lastResetDate = new Date().toDateString();
@@ -41,11 +50,12 @@ function initializeGemini() {
 
   try {
     genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-002' }); // Updated model for better compatibility
-    console.log('[Gemini] ✅ Initialized successfully');
+    // Use gemini-2.5-flash (available model from your API)
+    model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    console.log('[Gemini] ✅ Initialized successfully with gemini-2.5-flash');
     return true;
   } catch (error) {
-    console.error('[Gemini] Failed to initialize:', error);
+    console.error('[Gemini] Failed to initialize with gemini-2.5-flash:', error);
     return false;
   }
 }
@@ -95,7 +105,18 @@ function checkRateLimit(): { allowed: boolean; reason?: string } {
 function recordRequest() {
   requestTimestamps.push(Date.now());
   dailyRequestCount++;
-  console.log(`[Gemini] Request recorded. Today: ${dailyRequestCount}/${RATE_LIMIT_PER_DAY}, Last minute: ${requestTimestamps.length}/${RATE_LIMIT_PER_MINUTE}`);
+  const remainingToday = RATE_LIMIT_PER_DAY - dailyRequestCount;
+  const remainingThisMin = RATE_LIMIT_PER_MINUTE - requestTimestamps.length;
+  
+  console.log(`[Gemini] Request recorded: ${dailyRequestCount}/${RATE_LIMIT_PER_DAY} today (${remainingToday} remaining), ${requestTimestamps.length}/${RATE_LIMIT_PER_MINUTE} last min (${remainingThisMin} remaining)`);
+  
+  // Warn when approaching limits
+  if (remainingToday < 50) {
+    console.warn(`⚠️ [Gemini] Low daily quota: ${remainingToday} requests remaining`);
+  }
+  if (remainingThisMin < 1) {
+    console.warn(`⚠️ [Gemini] Approaching per-minute limit: ${remainingThisMin} requests remaining this minute`);
+  }
 }
 
 /**
@@ -114,11 +135,12 @@ export async function analyzeImageWithGemini(
   tags: string[];
   confidence: number;
 } | null> {
-  // Check rate limit first
+  // Check rate limit BEFORE making API call
   const rateLimitCheck = checkRateLimit();
   if (!rateLimitCheck.allowed) {
     console.warn(`[Gemini] ⚠️ Rate limit exceeded: ${rateLimitCheck.reason}`);
-    console.warn('[Gemini] Falling back to context-aware stub');
+    console.warn(`[Gemini] Free tier limits: ${RATE_LIMIT_PER_MINUTE}/min, ${RATE_LIMIT_PER_DAY}/day`);
+    console.warn(`[Gemini] Falling back to local stub generation`);
     return null; // Will fall back to stub in the route handler
   }
   
