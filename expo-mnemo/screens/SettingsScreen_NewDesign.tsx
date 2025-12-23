@@ -1,6 +1,6 @@
 /**
- * SettingsScreen - App settings and privacy controls
- * Soft pastel design
+ * SettingsScreen - Fully responsive app settings and privacy controls
+ * Adapts to any phone screen size
  */
 
 import React from 'react';
@@ -12,6 +12,7 @@ import {
   Switch,
   TouchableOpacity,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useMemoryContext } from '../store/MemoryContext';
 import { useSettingsContext } from '../store/SettingsContext';
@@ -21,6 +22,19 @@ import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignCo
 export const SettingsScreen: React.FC = () => {
   const { deleteAllMemories, addMemory } = useMemoryContext();
   const { settings, updateSettings, resetToDefaults } = useSettingsContext();
+  const dimensions = useWindowDimensions();
+  
+  // Responsive sizing based on screen width
+  const isSmallScreen = dimensions.width < 380;
+  const isTinyScreen = dimensions.width < 350;
+  
+  const titleSize = isTinyScreen ? 24 : isSmallScreen ? 28 : 32;
+  const subtitleSize = isTinyScreen ? 12 : isSmallScreen ? 13 : 14;
+  const sectionTitleSize = isTinyScreen ? 14 : isSmallScreen ? 16 : 18;
+  const labelSize = isTinyScreen ? 13 : isSmallScreen ? 14 : 15;
+  const descSize = isTinyScreen ? 10 : isSmallScreen ? 11 : 12;
+  const iconSize = isTinyScreen ? 18 : isSmallScreen ? 20 : 24;
+  const buttonTextSize = isTinyScreen ? 14 : isSmallScreen ? 15 : 16;
   
   const handleToggle = async (key: keyof typeof settings, value: boolean) => {
     try {
@@ -30,27 +44,23 @@ export const SettingsScreen: React.FC = () => {
         if (value) {
           try {
             await locationService.startPassiveLocationUpdates(addMemory);
-            console.log('Passive context logging started');
+            console.log('Location tracking started');
           } catch (error) {
-            console.error('Failed to start passive context logging:', error);
+            console.error('Failed to start location tracking:', error);
             Alert.alert(
               'Error',
-              'Failed to start passive context logging. Please check location permissions in Settings.'
+              'Failed to start location tracking. Check location permissions in Settings.'
             );
             await updateSettings({ [key]: false });
           }
         } else {
           locationService.stopPassiveLocationUpdates();
-          console.log('Passive context logging stopped');
+          console.log('Location tracking stopped');
         }
       }
       
       if (key === 'useActivityDetection') {
-        console.log('Activity detection setting changed:', value);
-      }
-      
-      if (key === 'allowAudioEmotionalCapture') {
-        console.log('Audio emotional capture setting changed:', value);
+        console.log('Activity detection changed:', value);
       }
     } catch (error) {
       console.error('Error updating setting:', error);
@@ -60,18 +70,18 @@ export const SettingsScreen: React.FC = () => {
   
   const handleDeleteAllData = () => {
     Alert.alert(
-      'Delete All Data',
-      'This will permanently delete all your memories and reset settings to defaults. This action cannot be undone.',
+      'Delete Everything?',
+      'This will permanently delete ALL your memories and settings. This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Delete All',
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteAllMemories();
               await resetToDefaults();
-              Alert.alert('Success', 'All data has been deleted and settings reset.');
+              Alert.alert('Success', 'All data has been deleted.');
             } catch (error) {
               console.error('Error deleting all data:', error);
               Alert.alert('Error', 'Failed to delete all data.');
@@ -86,8 +96,8 @@ export const SettingsScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Settings</Text>
-        <Text style={styles.subtitle}>Privacy & preferences</Text>
+        <Text style={[styles.title, { fontSize: titleSize }]}>Settings</Text>
+        <Text style={[styles.subtitle, { fontSize: subtitleSize }]}>Privacy & preferences</Text>
       </View>
 
       <ScrollView 
@@ -97,25 +107,27 @@ export const SettingsScreen: React.FC = () => {
       >
         {/* Privacy Description */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Privacy & Data</Text>
-          <Text style={styles.infoText}>
-            Your memories stay on your device. We don't collect, store, or share your personal data with anyone.
+          <Text style={[styles.infoTitle, { fontSize: labelSize + 1 }]}>Privacy & Data</Text>
+          <Text style={[styles.infoText, { fontSize: descSize + 1 }]}>
+            Your memories stay on your device. We don't collect or share your data.
           </Text>
         </View>
         
         {/* Privacy Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Privacy Settings</Text>
+          <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Privacy Settings</Text>
           
           <View style={styles.settingCard}>
             <View style={styles.settingHeader}>
-              <View style={styles.settingIconBadge}>
-                <Text style={styles.settingIcon}>🎙️</Text>
+              <View style={[styles.settingIconBadge, { width: iconSize + 16, height: iconSize + 16 }]}>
+                <Text style={{ fontSize: iconSize }}>🎙️</Text>
               </View>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Audio Recording</Text>
-                <Text style={styles.settingDescription}>
-                  Allow voice notes and emotion capture
+              <View style={[styles.settingInfo, { flex: 1, marginRight: Spacing.sm }]}>
+                <Text style={[styles.settingLabel, { fontSize: labelSize }]} numberOfLines={1}>
+                  Voice Recording
+                </Text>
+                <Text style={[styles.settingDescription, { fontSize: descSize }]} numberOfLines={2}>
+                  Allow voice notes
                 </Text>
               </View>
               <Switch
@@ -129,13 +141,15 @@ export const SettingsScreen: React.FC = () => {
 
           <View style={styles.settingCard}>
             <View style={styles.settingHeader}>
-              <View style={styles.settingIconBadge}>
-                <Text style={styles.settingIcon}>📸</Text>
+              <View style={[styles.settingIconBadge, { width: iconSize + 16, height: iconSize + 16 }]}>
+                <Text style={{ fontSize: iconSize }}>📸</Text>
               </View>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Photo Analysis</Text>
-                <Text style={styles.settingDescription}>
-                  Use AI to analyze photos
+              <View style={[styles.settingInfo, { flex: 1, marginRight: Spacing.sm }]}>
+                <Text style={[styles.settingLabel, { fontSize: labelSize }]} numberOfLines={1}>
+                  Photo Analysis
+                </Text>
+                <Text style={[styles.settingDescription, { fontSize: descSize }]} numberOfLines={2}>
+                  Use AI for photos
                 </Text>
               </View>
               <Switch
@@ -149,13 +163,15 @@ export const SettingsScreen: React.FC = () => {
 
           <View style={styles.settingCard}>
             <View style={styles.settingHeader}>
-              <View style={styles.settingIconBadge}>
-                <Text style={styles.settingIcon}>📍</Text>
+              <View style={[styles.settingIconBadge, { width: iconSize + 16, height: iconSize + 16 }]}>
+                <Text style={{ fontSize: iconSize }}>📍</Text>
               </View>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Location Tracking</Text>
-                <Text style={styles.settingDescription}>
-                  Log places you visit automatically
+              <View style={[styles.settingInfo, { flex: 1, marginRight: Spacing.sm }]}>
+                <Text style={[styles.settingLabel, { fontSize: labelSize }]} numberOfLines={1}>
+                  Location Tracking
+                </Text>
+                <Text style={[styles.settingDescription, { fontSize: descSize }]} numberOfLines={2}>
+                  Log places you visit
                 </Text>
               </View>
               <Switch
@@ -169,13 +185,15 @@ export const SettingsScreen: React.FC = () => {
 
           <View style={styles.settingCard}>
             <View style={styles.settingHeader}>
-              <View style={styles.settingIconBadge}>
-                <Text style={styles.settingIcon}>🚶</Text>
+              <View style={[styles.settingIconBadge, { width: iconSize + 16, height: iconSize + 16 }]}>
+                <Text style={{ fontSize: iconSize }}>🚶</Text>
               </View>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingLabel}>Motion Detection</Text>
-                <Text style={styles.settingDescription}>
-                  Detect when you're moving
+              <View style={[styles.settingInfo, { flex: 1, marginRight: Spacing.sm }]}>
+                <Text style={[styles.settingLabel, { fontSize: labelSize }]} numberOfLines={1}>
+                  Motion Detection
+                </Text>
+                <Text style={[styles.settingDescription, { fontSize: descSize }]} numberOfLines={2}>
+                  Detect movement
                 </Text>
               </View>
               <Switch
@@ -188,46 +206,21 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Data Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Data Management</Text>
-          
-          <TouchableOpacity style={styles.actionCard}>
-            <View style={styles.actionIconBadge}>
-              <Text style={styles.actionIcon}>📤</Text>
-            </View>
-            <View style={styles.actionInfo}>
-              <Text style={styles.actionLabel}>Export Data</Text>
-              <Text style={styles.actionDescription}>Download all your memories</Text>
-            </View>
-            <Text style={styles.actionArrow}>→</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionCard}>
-            <View style={styles.actionIconBadge}>
-              <Text style={styles.actionIcon}>📥</Text>
-            </View>
-            <View style={styles.actionInfo}>
-              <Text style={styles.actionLabel}>Import Data</Text>
-              <Text style={styles.actionDescription}>Restore from backup</Text>
-            </View>
-            <Text style={styles.actionArrow}>→</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Danger Zone */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Danger Zone</Text>
+          <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Danger Zone</Text>
           
           <View style={styles.dangerCard}>
             <View style={styles.dangerHeader}>
-              <View style={styles.dangerIconBadge}>
-                <Text style={styles.dangerIcon}>⚠️</Text>
+              <View style={[styles.dangerIconBadge, { width: iconSize + 20, height: iconSize + 20 }]}>
+                <Text style={{ fontSize: iconSize + 4 }}>⚠️</Text>
               </View>
-              <View>
-                <Text style={styles.dangerTitle}>Delete All Data</Text>
-                <Text style={styles.dangerDescription}>
-                  This will permanently delete all your memories and settings
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.dangerTitle, { fontSize: labelSize }]} numberOfLines={1}>
+                  Delete All Data
+                </Text>
+                <Text style={[styles.dangerDescription, { fontSize: descSize }]} numberOfLines={3}>
+                  Permanently delete all memories and settings
                 </Text>
               </View>
             </View>
@@ -236,17 +229,17 @@ export const SettingsScreen: React.FC = () => {
               style={styles.dangerButton}
               onPress={handleDeleteAllData}
             >
-              <Text style={styles.dangerButtonText}>Delete Everything</Text>
+              <Text style={[styles.dangerButtonText, { fontSize: buttonTextSize }]}>Delete Everything</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* App Info */}
         <View style={styles.infoCard}>
-          <Text style={styles.appName}>Mnemo</Text>
-          <Text style={styles.appVersion}>Version 1.0.0</Text>
-          <Text style={styles.appDescription}>
-            Your personal memory companion. Private, secure, and always with you.
+          <Text style={[styles.appName, { fontSize: titleSize - 6 }]}>Mnemo</Text>
+          <Text style={[styles.appVersion, { fontSize: descSize }]}>Version 1.0.0</Text>
+          <Text style={[styles.appDescription, { fontSize: descSize + 1 }]}>
+            Your personal memory companion. Private, secure, always with you.
           </Text>
         </View>
 
@@ -262,24 +255,21 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   header: {
-    paddingTop: 60,
-    paddingBottom: Spacing.lg,
+    paddingTop: Spacing.extraLarge + 20,
     paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
     backgroundColor: Colors.cardLight,
-    borderBottomLeftRadius: BorderRadius.large,
-    borderBottomRightRadius: BorderRadius.large,
-    ...Shadows.small,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
   title: {
-    fontSize: 28,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: Colors.text,
+    marginBottom: Spacing.tiny,
   },
   subtitle: {
-    fontSize: 14,
     color: Colors.textSecondary,
-    marginTop: 4,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   scrollView: {
     flex: 1,
@@ -287,173 +277,110 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.md,
   },
-  infoCard: {
-    backgroundColor: Colors.secondary,
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.large,
-    marginBottom: Spacing.lg,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
-  },
-  infoText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 22,
-  },
   section: {
     marginBottom: Spacing.lg,
   },
   sectionTitle: {
-    fontSize: 18,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: Colors.text,
     marginBottom: Spacing.sm,
-    paddingLeft: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
+  },
+  infoCard: {
+    backgroundColor: Colors.cardLight,
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  infoTitle: {
+    fontWeight: '700',
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  infoText: {
+    color: Colors.textSecondary,
+    lineHeight: 18,
   },
   settingCard: {
     backgroundColor: Colors.cardLight,
+    borderRadius: BorderRadius.medium,
     padding: Spacing.md,
-    borderRadius: BorderRadius.large,
     marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
     ...Shadows.small,
   },
   settingHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
   },
   settingIconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.small,
-    backgroundColor: Colors.secondary,
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  settingIcon: {
-    fontSize: 20,
+    alignItems: 'center',
+    marginRight: Spacing.sm,
   },
   settingInfo: {
-    flex: 1,
+    marginRight: Spacing.md,
   },
   settingLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textPrimary,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 2,
   },
   settingDescription: {
-    fontSize: 13,
     color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  actionCard: {
-    backgroundColor: Colors.cardLight,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.large,
-    marginBottom: Spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    ...Shadows.small,
-  },
-  actionIconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.small,
-    backgroundColor: Colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionIcon: {
-    fontSize: 20,
-  },
-  actionInfo: {
-    flex: 1,
-  },
-  actionLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  actionDescription: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  actionArrow: {
-    fontSize: 20,
-    color: Colors.textMuted,
-    fontWeight: '700',
+    lineHeight: 16,
   },
   dangerCard: {
-    backgroundColor: Colors.error,
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.large,
-    ...Shadows.small,
+    backgroundColor: '#FFF0F0',
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#FFCCCC',
   },
   dangerHeader: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    alignItems: 'flex-start',
     marginBottom: Spacing.md,
   },
   dangerIconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.small,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  dangerIcon: {
-    fontSize: 20,
+    alignItems: 'center',
+    marginRight: Spacing.sm,
   },
   dangerTitle: {
-    fontSize: 16,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: '#D32F2F',
+    marginBottom: 4,
   },
   dangerDescription: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 4,
-    lineHeight: 18,
+    color: '#B71C1C',
+    lineHeight: 16,
   },
   dangerButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    backgroundColor: '#D32F2F',
+    paddingVertical: Spacing.md,
     borderRadius: BorderRadius.small,
     alignItems: 'center',
   },
   dangerButtonText: {
-    fontSize: 14,
+    color: Colors.white,
     fontWeight: '700',
-    color: Colors.textPrimary,
   },
   appName: {
-    fontSize: 20,
     fontWeight: '800',
-    color: Colors.textPrimary,
-    textAlign: 'center',
+    color: Colors.text,
+    marginBottom: Spacing.tiny,
   },
   appVersion: {
-    fontSize: 12,
-    fontWeight: '600',
     color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 4,
+    marginBottom: Spacing.sm,
+    fontWeight: '600',
   },
   appDescription: {
-    fontSize: 13,
     color: Colors.textSecondary,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });
-
-

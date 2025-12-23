@@ -1,11 +1,11 @@
 /**
- * Animated EmotionalSessionScreen - Beautiful Siri-style voice recording
+ * Voice Recording Screen - Responsive Siri-style reactive audio visualization
  * 
  * Features:
- * - Animated glowing rings that respond to voice
- * - Smooth pulsating waves
- * - Real-time audio visualization
- * - Modern gradient design
+ * - REAL audio-reactive waves (responds to your voice)
+ * - Fully responsive to any phone screen size
+ * - Returns to home after session ends
+ * - Auto-generates memories in Moments tab
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -18,6 +18,7 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -33,48 +34,40 @@ import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignCo
 
 type EmotionalSessionNavigationProp = NativeStackNavigationProp<CaptureStackParamList, 'EmotionalSession'>;
 
-const { width, height } = Dimensions.get('window');
 const ANALYSIS_INTERVAL_SEC = 10;
 const TRIGGER_EMOTIONS: Emotion[] = ['happy', 'surprised'];
-
-// Number of animated rings
-const NUM_RINGS = 4;
+const NUM_BARS = 40; // Siri-style wave bars
 
 export const EmotionalSessionScreen: React.FC = () => {
   const navigation = useNavigation<EmotionalSessionNavigationProp>();
   const { addMemory } = useMemoryContext();
   const { settings } = useSettingsContext();
+  const dimensions = useWindowDimensions();
   
   const [isRecording, setIsRecording] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(0);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [lastEmotionDetected, setLastEmotionDetected] = useState<Emotion | null>(null);
-  const [audioLevel, setAudioLevel] = useState(0);
+  const [audioMetering, setAudioMetering] = useState<number[]>(Array(NUM_BARS).fill(0));
   
   const recordingRef = useRef<Audio.Recording | null>(null);
   const sessionStartTimeRef = useRef<Date | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const analysisIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const audioLevelIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const meteringIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Animated values for rings
-  const ringAnimations = useRef(
-    Array.from({ length: NUM_RINGS }, () => ({
-      scale: new Animated.Value(1),
-      opacity: new Animated.Value(0.3),
-    }))
+  // Animated bars for Siri-style visualization
+  const barAnimations = useRef(
+    Array.from({ length: NUM_BARS }, () => new Animated.Value(0.1))
   ).current;
-  
-  // Central pulse animation
-  const pulseAnimation = useRef(new Animated.Value(1)).current;
   
   useEffect(() => {
     if (!settings.allowAudioEmotionalCapture) {
       Alert.alert(
         'Audio Capture Disabled',
         'Please enable "Allow Audio-based Emotional Capture" in Settings to use this feature.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        [{ text: 'OK', onPress: () => navigation.navigate('Capture') }]
       );
       return;
     }
@@ -87,75 +80,23 @@ export const EmotionalSessionScreen: React.FC = () => {
     };
   }, [settings.allowAudioEmotionalCapture]);
   
-  // Animate rings continuously
+  // Animate bars based on REAL audio levels
   useEffect(() => {
     if (!isRecording) return;
     
-    const animations = ringAnimations.map((ring, index) => {
-      const delay = index * 300; // Stagger animations
-      const duration = 2000 + (index * 200); // Different speeds
+    const animations = barAnimations.map((bar, index) => {
+      const targetHeight = audioMetering[index] || 0.1;
       
-      return Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.parallel([
-            Animated.timing(ring.scale, {
-              toValue: 1.8 + (index * 0.2),
-              duration,
-              useNativeDriver: true,
-            }),
-            Animated.timing(ring.opacity, {
-              toValue: 0,
-              duration,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.parallel([
-            Animated.timing(ring.scale, {
-              toValue: 1,
-              duration: 0,
-              useNativeDriver: true,
-            }),
-            Animated.timing(ring.opacity, {
-              toValue: 0.6 - (index * 0.1),
-              duration: 0,
-              useNativeDriver: true,
-            }),
-          ]),
-        ])
-      );
+      return Animated.spring(bar, {
+        toValue: targetHeight,
+        friction: 8,
+        tension: 100,
+        useNativeDriver: false, // height animation
+      });
     });
     
-    animations.forEach(anim => anim.start());
-    
-    return () => {
-      animations.forEach(anim => anim.stop());
-    };
-  }, [isRecording]);
-  
-  // Pulse animation for audio level
-  useEffect(() => {
-    if (!isRecording) return;
-    
-    const pulsing = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnimation, {
-          toValue: 1.1 + (audioLevel * 0.2),
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnimation, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    
-    pulsing.start();
-    
-    return () => pulsing.stop();
-  }, [isRecording, audioLevel]);
+    Animated.parallel(animations).start();
+  }, [audioMetering, isRecording]);
   
   const requestPermissionsAndStart = async () => {
     try {
@@ -165,8 +106,8 @@ export const EmotionalSessionScreen: React.FC = () => {
         setHasPermission(false);
         Alert.alert(
           'Microphone Permission Required',
-          'Mnemo needs microphone access to capture emotional moments.',
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
+          'Mnemo needs microphone access to capture voice moments.',
+          [{ text: 'OK', onPress: () => navigation.navigate('Capture') }]
         );
         return;
       }
@@ -188,12 +129,16 @@ export const EmotionalSessionScreen: React.FC = () => {
       });
       
       const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        undefined,
+        100 // Update metering every 100ms
       );
       
       recordingRef.current = recording;
       setIsRecording(true);
       sessionStartTimeRef.current = new Date();
+      
+      console.log('Recording started');
       
       // Duration timer
       durationIntervalRef.current = setInterval(() => {
@@ -203,18 +148,39 @@ export const EmotionalSessionScreen: React.FC = () => {
         }
       }, 1000);
       
-      // Audio level simulation (for visual feedback)
-      audioLevelIntervalRef.current = setInterval(() => {
-        // Simulate audio level - in real app, get from recording.getStatusAsync()
-        setAudioLevel(Math.random() * 0.8 + 0.2);
+      // REAL audio metering for reactive visualization
+      meteringIntervalRef.current = setInterval(async () => {
+        if (recordingRef.current) {
+          try {
+            const status = await recordingRef.current.getStatusAsync();
+            if (status.isRecording && status.metering !== undefined) {
+              // Convert metering to usable values for bars
+              // metering ranges from -160 (silence) to 0 (max)
+              const normalized = Math.max(0, (status.metering + 160) / 160);
+              
+              // Create wave pattern with center emphasis (like Siri)
+              const newMetering = Array.from({ length: NUM_BARS }, (_, i) => {
+                const centerDistance = Math.abs(i - NUM_BARS / 2) / (NUM_BARS / 2);
+                const centerBoost = 1 - centerDistance * 0.5; // Center bars taller
+                const randomVariation = Math.random() * 0.3 + 0.7;
+                const height = normalized * centerBoost * randomVariation;
+                
+                return Math.max(0.05, Math.min(1, height)); // Clamp between 0.05 and 1
+              });
+              
+              setAudioMetering(newMetering);
+            }
+          } catch (error) {
+            // Silently handle metering errors
+          }
+        }
       }, 100);
       
-      // Periodic analysis
+      // Periodic emotion analysis
       analysisIntervalRef.current = setInterval(() => {
         analyzeCurrentRecording();
       }, ANALYSIS_INTERVAL_SEC * 1000);
       
-      console.log('Recording started');
     } catch (error) {
       console.error('Error starting recording:', error);
       Alert.alert('Error', 'Failed to start recording. Please try again.');
@@ -236,9 +202,8 @@ export const EmotionalSessionScreen: React.FC = () => {
       }
       
       const durationSec = status.durationMillis ? status.durationMillis / 1000 : 0;
-      const averageLevel = audioLevel;
+      const averageLevel = status.metering !== undefined ? (status.metering + 160) / 160 : 0.5;
       
-      // Classify emotion with longer timeout
       const result = await Promise.race([
         classifyEmotion({
           durationSec,
@@ -246,12 +211,9 @@ export const EmotionalSessionScreen: React.FC = () => {
           audioUri: status.uri,
         }),
         new Promise<{ emotion: Emotion; confidence: number }>((_, reject) =>
-          setTimeout(() => reject(new Error('Classification timeout')), 15000)
+          setTimeout(() => reject(new Error('timeout')), 15000)
         ),
-      ]).catch((error) => {
-        console.log('Classification timeout or error, using fallback');
-        return { emotion: 'neutral' as Emotion, confidence: 0.5 };
-      });
+      ]).catch(() => ({ emotion: 'neutral' as Emotion, confidence: 0.5 }));
       
       const emotion = result.emotion;
       setLastEmotionDetected(emotion);
@@ -270,7 +232,6 @@ export const EmotionalSessionScreen: React.FC = () => {
           },
         });
         
-        // Save audio file
         try {
           const permanentAudioUri = await saveAudioFile(status.uri, memory.id);
           memory.details = { ...memory.details, audioUri: permanentAudioUri };
@@ -282,7 +243,7 @@ export const EmotionalSessionScreen: React.FC = () => {
         
         Alert.alert(
           'Moment Captured! ✨',
-          `${emotion.charAt(0).toUpperCase() + emotion.slice(1)} moment detected and saved.`,
+          `${emotion.charAt(0).toUpperCase() + emotion.slice(1)} moment detected and saved to Moments.`,
           [{ text: 'OK' }]
         );
       }
@@ -307,10 +268,10 @@ export const EmotionalSessionScreen: React.FC = () => {
       
       console.log('Recording stopped');
       
-      // Save final recording
+      // Save final recording to Moments
       if (recordingUri && status.durationMillis && status.durationMillis > 0) {
         const durationSec = status.durationMillis / 1000;
-        const averageLevel = audioLevel;
+        const averageLevel = status.metering !== undefined ? (status.metering + 160) / 160 : 0.5;
         
         try {
           const result = await Promise.race([
@@ -326,7 +287,13 @@ export const EmotionalSessionScreen: React.FC = () => {
           const memory = createMemoryEntry('emotional', summary, {
             startTime: sessionStartTimeRef.current || new Date(),
             endTime: new Date(),
-            details: { emotion, confidence: result.confidence, audioUri: recordingUri, durationSec, averageLevel },
+            details: { 
+              emotion, 
+              confidence: result.confidence, 
+              audioUri: recordingUri, 
+              durationSec, 
+              averageLevel 
+            },
           });
           
           try {
@@ -337,9 +304,9 @@ export const EmotionalSessionScreen: React.FC = () => {
           }
           
           await addMemory(memory);
-          console.log(`Final recording saved: ${emotion} moment`);
+          console.log(`✅ Voice memory saved to Moments: ${emotion}`);
         } catch (error) {
-          console.error('Error analyzing final recording:', error);
+          console.error('Error saving voice memory:', error);
         }
       }
     } catch (error) {
@@ -356,25 +323,21 @@ export const EmotionalSessionScreen: React.FC = () => {
       clearInterval(analysisIntervalRef.current);
       analysisIntervalRef.current = null;
     }
-    if (audioLevelIntervalRef.current) {
-      clearInterval(audioLevelIntervalRef.current);
-      audioLevelIntervalRef.current = null;
+    if (meteringIntervalRef.current) {
+      clearInterval(meteringIntervalRef.current);
+      meteringIntervalRef.current = null;
     }
   };
   
   const handleEndSession = async () => {
-    Alert.alert('End Session', 'Are you sure you want to end this emotional capture session?', [
+    Alert.alert('End Session', 'Save this voice moment to your Moments?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'End Session',
-        style: 'destructive',
+        text: 'Save & Exit',
         onPress: async () => {
           await stopRecording();
-          if (navigation.canGoBack()) {
-            navigation.goBack();
-          } else {
-            navigation.navigate('Capture');
-          }
+          // Go back to Home (not Moments)
+          navigation.navigate('Capture');
         },
       },
     ]);
@@ -385,6 +348,14 @@ export const EmotionalSessionScreen: React.FC = () => {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+  
+  // Responsive calculations
+  const screenWidth = dimensions.width;
+  const screenHeight = dimensions.height;
+  const isSmallScreen = screenHeight < 700;
+  const visualizerHeight = isSmallScreen ? screenHeight * 0.3 : screenHeight * 0.35;
+  const barWidth = Math.max(3, (screenWidth * 0.8) / NUM_BARS);
+  const maxBarHeight = visualizerHeight * 0.8;
   
   if (hasPermission === null) {
     return (
@@ -406,51 +377,43 @@ export const EmotionalSessionScreen: React.FC = () => {
   return (
     <LinearGradient colors={['#1a1a2e', '#0f0f1e']} style={styles.container}>
       <View style={styles.content}>
-        {/* Animated Rings */}
-        <View style={styles.visualizerContainer}>
-          {ringAnimations.map((ring, index) => (
-            <Animated.View
-              key={index}
-              style={[
-                styles.ring,
-                {
-                  transform: [{ scale: ring.scale }],
-                  opacity: ring.opacity,
-                  borderColor: index % 2 === 0 ? '#4ade80' : '#22d3ee',
-                  borderWidth: 3 - (index * 0.5),
-                },
-              ]}
-            />
-          ))}
-          
-          {/* Central Circle */}
-          <Animated.View
-            style={[
-              styles.centralCircle,
-              {
-                transform: [{ scale: pulseAnimation }],
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={['#4ade80', '#22d3ee']}
-              style={styles.centralGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Text style={styles.centralIcon}>🎙️</Text>
-            </LinearGradient>
-          </Animated.View>
+        {/* Siri-style Audio Visualizer */}
+        <View style={[styles.visualizerContainer, { height: visualizerHeight }]}>
+          <View style={styles.barsContainer}>
+            {barAnimations.map((bar, index) => (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.bar,
+                  {
+                    width: barWidth,
+                    height: bar.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [barWidth, maxBarHeight],
+                    }),
+                    backgroundColor: index < NUM_BARS / 3 ? '#22d3ee' : 
+                                   index < (NUM_BARS * 2) / 3 ? '#4ade80' : '#22d3ee',
+                    opacity: bar.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.3, 1],
+                    }),
+                  },
+                ]}
+              />
+            ))}
+          </View>
         </View>
         
         {/* Status Text */}
-        <Text style={styles.instructionText}>
-          {isAnalyzing ? 'Analyzing...' : 'Listening for moments'}
+        <Text style={[styles.instructionText, { fontSize: isSmallScreen ? 18 : 22 }]}>
+          {isAnalyzing ? 'Analyzing...' : 'Speak naturally'}
         </Text>
         
         {/* Duration */}
         <View style={styles.durationContainer}>
-          <Text style={styles.durationValue}>{formatDuration(sessionDuration)}</Text>
+          <Text style={[styles.durationValue, { fontSize: isSmallScreen ? 48 : 64 }]}>
+            {formatDuration(sessionDuration)}
+          </Text>
           <Text style={styles.durationLabel}>Recording</Text>
         </View>
         
@@ -458,21 +421,24 @@ export const EmotionalSessionScreen: React.FC = () => {
         {lastEmotionDetected && (
           <View style={styles.emotionBadge}>
             <Text style={styles.emotionText}>
-              Last detected: {lastEmotionDetected.charAt(0).toUpperCase() + lastEmotionDetected.slice(1)}
+              Last: {lastEmotionDetected.charAt(0).toUpperCase() + lastEmotionDetected.slice(1)}
             </Text>
           </View>
         )}
       </View>
       
-      {/* End Session Button */}
-      <TouchableOpacity style={styles.endButton} onPress={handleEndSession}>
-        <Text style={styles.endButtonText}>End Session</Text>
+      {/* End Session Button - Fixed at bottom */}
+      <TouchableOpacity 
+        style={[styles.endButton, { paddingVertical: isSmallScreen ? Spacing.md : Spacing.lg }]} 
+        onPress={handleEndSession}
+      >
+        <Text style={[styles.endButtonText, { fontSize: isSmallScreen ? 16 : 18 }]}>
+          End Session
+        </Text>
       </TouchableOpacity>
     </LinearGradient>
   );
 };
-
-const RING_SIZE = Math.min(width, height) * 0.5;
 
 const styles = StyleSheet.create({
   container: {
@@ -493,56 +459,41 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: Colors.error,
     textAlign: 'center',
+    paddingHorizontal: Spacing.lg,
   },
   visualizerContainer: {
-    width: RING_SIZE,
-    height: RING_SIZE,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.extraLarge * 2,
-  },
-  ring: {
-    position: 'absolute',
-    width: RING_SIZE,
-    height: RING_SIZE,
-    borderRadius: RING_SIZE / 2,
-    borderWidth: 3,
-  },
-  centralCircle: {
-    width: RING_SIZE * 0.4,
-    height: RING_SIZE * 0.4,
-    borderRadius: (RING_SIZE * 0.4) / 2,
-    overflow: 'hidden',
-    ...Shadows.large,
-  },
-  centralGradient: {
     width: '100%',
-    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: Spacing.extraLarge,
   },
-  centralIcon: {
-    fontSize: 60,
+  barsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+    gap: 2,
+  },
+  bar: {
+    borderRadius: 4,
   },
   instructionText: {
-    fontSize: 20,
     color: Colors.textLight,
     textAlign: 'center',
-    marginBottom: Spacing.large,
+    marginBottom: Spacing.lg,
     fontWeight: '600',
   },
   durationContainer: {
     alignItems: 'center',
-    marginBottom: Spacing.large,
+    marginBottom: Spacing.lg,
   },
   durationValue: {
-    fontSize: 56,
     fontWeight: '800',
     color: '#4ade80',
     letterSpacing: -2,
   },
   durationLabel: {
-    fontSize: 16,
+    fontSize: 14,
     color: Colors.textMuted,
     marginTop: Spacing.tiny,
     fontWeight: '600',
@@ -556,21 +507,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(74, 222, 128, 0.3)',
   },
   emotionText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#4ade80',
     fontWeight: '700',
   },
   endButton: {
-    backgroundColor: Colors.error,
-    paddingVertical: Spacing.lg,
+    backgroundColor: Colors.peach,
     borderRadius: BorderRadius.large,
     alignItems: 'center',
     ...Shadows.button,
   },
   endButtonText: {
-    color: Colors.white,
-    fontSize: 18,
+    color: Colors.charcoalDark,
     fontWeight: '700',
   },
 });
-
