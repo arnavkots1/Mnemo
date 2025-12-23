@@ -16,6 +16,7 @@ import {
   TextInput,
   useWindowDimensions,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
@@ -25,6 +26,7 @@ import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignCo
 import { DataQualityWarning } from '../components/DataQualityWarning';
 
 export const VisionScreen: React.FC = () => {
+  const navigation = useNavigation();
   const { addMemory } = useMemoryContext();
   const dimensions = useWindowDimensions();
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -181,13 +183,20 @@ export const VisionScreen: React.FC = () => {
         dataSources: memory.details?.dataSources || [],
       });
 
-      Alert.alert('✨ Memory Created!', 'Saved to Moments tab', [{ text: 'OK' }]);
+      // Navigate to Moments tab to show the saved memory
+      const parentNav = navigation.getParent();
+      if (parentNav) {
+        parentNav.navigate('Moments' as never);
+      }
 
-      // Reset form
-      setSelectedPhoto(null);
-      setAudioUri(null);
-      setLocation(null);
-      setUserNote('');
+      // Reset form after a short delay to allow navigation
+      setTimeout(() => {
+        setSelectedPhoto(null);
+        setAudioUri(null);
+        setLocation(null);
+        setUserNote('');
+        setLastGeneratedMemory(null);
+      }, 100);
     } catch (error) {
       console.error('Error generating memory:', error);
       Alert.alert('Error', 'Failed to generate memory. Please try again.');
@@ -629,8 +638,9 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: Colors.textPrimary,
     lineHeight: 22,
+    opacity: 0.9,
   },
   emptyWarning: {
     flexDirection: 'row',

@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Audio } from 'expo-av';
+import * as Location from 'expo-location';
 import { useFocusEffect } from '@react-navigation/native';
 import { useMemoryContext } from '../store/MemoryContext';
 import { MemoryEntry, MemoryKind } from '../types/MemoryEntry';
@@ -32,6 +33,8 @@ export const MomentsScreen: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>('all');
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ placeName: string; latitude: number; longitude: number } | null>(null);
+  const [locationPermissionGranted, setLocationPermissionGranted] = useState<boolean | null>(null);
   
   useFocusEffect(
     useCallback(() => {
@@ -58,6 +61,78 @@ export const MomentsScreen: React.FC = () => {
     if (filter === 'context_log') return memories.filter(m => m.kind === 'context');
     return memories.filter(m => m.kind === filter);
   }, [memories, filter]);
+
+  // Check location permissions and get current location when Places filter is active
+  useEffect(() => {
+    const checkLocation = async () => {
+      if (filter === 'context_log' && filteredMemories.length === 0) {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          const hasPermission = status === 'granted';
+          setLocationPermissionGranted(hasPermission);
+          
+          if (hasPermission) {
+            try {
+              const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+              });
+              
+              // Reverse geocode to get place name
+              try {
+                const results = await Location.reverseGeocodeAsync({
+                  latitude: location.coords.latitude,
+                  longitude: location.coords.longitude,
+                });
+                
+                if (results.length > 0) {
+                  const result = results[0];
+                  const parts: string[] = [];
+                  if (result.name) parts.push(result.name);
+                  if (result.street) parts.push(result.street);
+                  if (result.city) parts.push(result.city);
+                  if (result.region) parts.push(result.region);
+                  
+                  const placeName = parts.length > 0 ? parts.join(', ') : 'Current location';
+                  setCurrentLocation({
+                    placeName,
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                  });
+                } else {
+                  setCurrentLocation({
+                    placeName: 'Current location',
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                  });
+                }
+              } catch (error) {
+                // If reverse geocoding fails, still show coordinates
+                setCurrentLocation({
+                  placeName: 'Current location',
+                  latitude: location.coords.latitude,
+                  longitude: location.coords.longitude,
+                });
+              }
+            } catch (error) {
+              // Location unavailable (e.g., in emulator)
+              setCurrentLocation(null);
+            }
+          } else {
+            setCurrentLocation(null);
+          }
+        } catch (error) {
+          setLocationPermissionGranted(false);
+          setCurrentLocation(null);
+        }
+      } else {
+        // Reset when filter changes or memories exist
+        setCurrentLocation(null);
+        setLocationPermissionGranted(null);
+      }
+    };
+    
+    checkLocation();
+  }, [filter, filteredMemories.length]);
 
   const groupedMemories = React.useMemo(() => {
     const groups: { [key: string]: MemoryEntry[] } = {};
@@ -353,19 +428,80 @@ export const MomentsScreen: React.FC = () => {
           </View>
         ) : groupedMemories.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <View style={styles.emptyIcon}>
-              <Text style={styles.emptyIconText}>📸</Text>
-            </View>
-            <Text style={styles.emptyTitle}>No moments yet</Text>
-            <Text style={styles.emptyText}>
-              Start capturing memories by importing photos or recording voice notes
-            </Text>
-            <TouchableOpacity 
-              style={styles.emptyButton}
-              onPress={handleImportPhotos}
-            >
-              <Text style={styles.emptyButtonText}>Import Your First Photo</Text>
-            </TouchableOpacity>
+            {filter === 'context_log' ? (
+              <>
+                <View style={styles.emptyIcon}>
+                  <Text style={styles.emptyIconText}>📍</Text>
+                </View>
+                {locationPermissionGranted === true && currentLocation ? (
+                  <>
+                    <Text style={styles.emptyTitle}>Location Tracking Active</Text>
+                    <Text style={styles.emptyText}>
+                      Currently at: {currentLocation.placeName}
+                    </Text>
+                    <Text style={styles.emptySubtext}>
+                      Places will appear here when you move to a new location (500m+ away)
+                    </Text>
+                  </>
+                ) : locationPermissionGranted === false ? (
+                  <>
+                    <Text style={styles.emptyTitle}>Location Permission Needed</Text>
+                    <Text style={styles.emptyText}>
+                      Enable location access in Settings to track places automatically
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.emptyTitle}>Checking Location...</Text>
+                    <Text style={styles.emptyText}>
+                      Please wait while we check your location permissions
+                    </Text>
+                  </>
+                )}
+              </>
+            ) : filter === 'audio' ? (
+              <>
+                <View style={styles.emptyIcon}>
+                  <Text style={styles.emptyIconText}>🎤</Text>
+                </View>
+                <Text style={styles.emptyTitle}>No voice moments yet</Text>
+                <Text style={styles.emptyText}>
+                  Record voice notes from the Home screen to capture audio moments
+                </Text>
+              </>
+            ) : filter === 'photo' ? (
+              <>
+                <View style={styles.emptyIcon}>
+                  <Text style={styles.emptyIconText}>📸</Text>
+                </View>
+                <Text style={styles.emptyTitle}>No photos yet</Text>
+                <Text style={styles.emptyText}>
+                  Import photos to create visual memories
+                </Text>
+                <TouchableOpacity 
+                  style={styles.emptyButton}
+                  onPress={handleImportPhotos}
+                >
+                  <Text style={styles.emptyButtonText}>Import Your First Photo</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <View style={styles.emptyIcon}>
+                  <Text style={styles.emptyIconText}>📸</Text>
+                </View>
+                <Text style={styles.emptyTitle}>No moments yet</Text>
+                <Text style={styles.emptyText}>
+                  Start capturing memories by importing photos or recording voice notes
+                </Text>
+                <TouchableOpacity 
+                  style={styles.emptyButton}
+                  onPress={handleImportPhotos}
+                >
+                  <Text style={styles.emptyButtonText}>Import Your First Photo</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         ) : (
           groupedMemories.map(([date, dayMemories]) => (
@@ -520,7 +656,15 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
+    marginBottom: Spacing.sm,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
     marginBottom: Spacing.lg,
+    opacity: 0.8,
   },
   emptyButton: {
     paddingHorizontal: Spacing.lg,

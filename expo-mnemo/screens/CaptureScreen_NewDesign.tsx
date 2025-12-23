@@ -51,6 +51,20 @@ export const CaptureScreen: React.FC = () => {
       parentNav.navigate('Vision' as never);
     }
   };
+
+  const handleOpenMoments = () => {
+    const parentNav = navigation.getParent();
+    if (parentNav) {
+      parentNav.navigate('Moments' as never);
+    }
+  };
+
+  const handleOpenSettings = () => {
+    const parentNav = navigation.getParent();
+    if (parentNav) {
+      parentNav.navigate('Settings' as never);
+    }
+  };
   
   return (
     <ScrollView 
@@ -147,9 +161,12 @@ export const CaptureScreen: React.FC = () => {
           <Text style={styles.cardDescription}>
             Import & organize
           </Text>
-          <View style={styles.cardTag}>
+          <TouchableOpacity 
+            style={styles.cardTag}
+            onPress={handleOpenMoments}
+          >
             <Text style={styles.cardTagText}>In Moments →</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Location Tracking Card */}
@@ -161,9 +178,12 @@ export const CaptureScreen: React.FC = () => {
           <Text style={styles.cardDescription}>
             Track your journey
           </Text>
-          <View style={styles.cardTag}>
+          <TouchableOpacity 
+            style={styles.cardTag}
+            onPress={handleOpenSettings}
+          >
             <Text style={styles.cardTagText}>In Settings</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Today Summary Card - Wide */}
@@ -384,7 +404,8 @@ const styles = StyleSheet.create({
   cardTagText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: Colors.textPrimary,
+    opacity: 0.9,
   },
   summaryTitle: {
     fontSize: 18,
@@ -432,8 +453,9 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: Colors.textPrimary,
     lineHeight: 20,
+    opacity: 0.9,
   },
 });
 
