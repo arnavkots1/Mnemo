@@ -29,11 +29,13 @@ app.use(express.urlencoded({ extended: true })); // For file uploads
 
 // Import memory analysis routes
 import memoryAnalysisRouter from './routes/memoryAnalysis';
+import dailySummariesRouter from './routes/dailySummaries';
 
 // Routes
 app.use('/api', emotionRouter);
 app.use('/api', imageRouter);
 app.use('/api/memory', memoryAnalysisRouter); // Comprehensive memory analysis
+app.use('/api/memory', dailySummariesRouter); // Daily summaries
 
 // Health check endpoint
 app.get('/health', (req, res) => {

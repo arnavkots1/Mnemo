@@ -35,6 +35,7 @@ router.post(
   ]),
   async (req, res) => {
     try {
+      console.log('[Memory Analysis] 📥 Received request');
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       const {
         audioTranscript,
@@ -47,6 +48,15 @@ router.post(
         timeOfDay,
         dayOfWeek,
       } = req.body;
+
+      console.log('[Memory Analysis] 📊 Request data:', {
+        hasPhoto: !!(files?.photo && files.photo[0]),
+        hasAudio: !!(files?.audio && files.audio[0]),
+        hasLocation: !!(locationName || (latitude && longitude)),
+        hasUserNote: !!userNote,
+        hasAudioTranscript: !!audioTranscript,
+        hasAudioEmotion: !!audioEmotion,
+      });
 
       // Parse timestamp
       const memoryTimestamp = timestamp ? new Date(timestamp) : new Date();
@@ -61,9 +71,16 @@ router.post(
       // Add photo if provided
       if (files?.photo && files.photo[0]) {
         input.photoPath = files.photo[0].path;
+        console.log('[Memory Analysis] 📸 Photo file:', files.photo[0].path);
       }
 
-      // Add audio data
+      // Add audio file if provided (Gemini can process audio directly)
+      if (files?.audio && files.audio[0]) {
+        input.audioPath = files.audio[0].path;
+        console.log('[Memory Analysis] 🎤 Audio file:', files.audio[0].path);
+      }
+
+      // Add audio transcript if provided (from frontend emotion analysis)
       if (audioTranscript) {
         input.audioTranscript = audioTranscript;
       }
@@ -85,10 +102,21 @@ router.post(
         input.userNote = userNote;
       }
 
-      console.log('[Memory Analysis] Analyzing with data sources:', Object.keys(input).filter(k => input[k]));
+      const dataSources = Object.keys(input).filter(k => input[k] && k !== 'timestamp');
+      console.log('[Memory Analysis] 🔍 Analyzing with data sources:', dataSources);
 
       // Call Gemini for comprehensive analysis
       const result = await analyzeMemoryWithGemini(input);
+      
+      if (result) {
+        console.log('[Memory Analysis] ✅ Gemini analysis successful:', {
+          summary: result.summary,
+          dataQuality: result.dataQuality,
+          usedGemini: true,
+        });
+      } else {
+        console.log('[Memory Analysis] ⚠️ Gemini analysis returned null - using fallback');
+      }
 
       // Cleanup uploaded files
       if (files?.photo) {

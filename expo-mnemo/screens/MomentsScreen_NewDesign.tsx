@@ -28,7 +28,7 @@ import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignCo
 type FilterType = 'all' | MemoryKind | 'audio' | 'context_log'; // Support legacy filter names
 
 export const MomentsScreen: React.FC = () => {
-  const { memories, refreshMemories, addMemory, deleteAllMemories, isLoading } = useMemoryContext();
+  const { memories, refreshMemories, addMemory, deleteAllMemories, deleteMemory, isLoading } = useMemoryContext();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
@@ -53,13 +53,30 @@ export const MomentsScreen: React.FC = () => {
 
   useEffect(() => {
     console.log(`📊 Moments: ${memories.length} memories loaded`);
-  }, [memories.length]);
+    console.log(`📊 Moments: isLoading=${isLoading}, filter="${filter}"`);
+    if (memories.length > 0) {
+      console.log(`📊 Moments: Sample memory:`, {
+        id: memories[0].id,
+        kind: memories[0].kind,
+        summary: memories[0].summary,
+        startTime: memories[0].startTime,
+      });
+    }
+  }, [memories.length, isLoading, filter]);
 
   const filteredMemories = React.useMemo(() => {
-    if (filter === 'all') return memories;
-    if (filter === 'audio') return memories.filter(m => m.kind === 'emotional');
-    if (filter === 'context_log') return memories.filter(m => m.kind === 'context');
-    return memories.filter(m => m.kind === filter);
+    let result;
+    if (filter === 'all') {
+      result = memories;
+    } else if (filter === 'audio') {
+      result = memories.filter(m => m.kind === 'emotional');
+    } else if (filter === 'context_log') {
+      result = memories.filter(m => m.kind === 'context');
+    } else {
+      result = memories.filter(m => m.kind === filter);
+    }
+    console.log(`🔍 [Moments] Filter: "${filter}", Total: ${memories.length}, Filtered: ${result.length}`);
+    return result;
   }, [memories, filter]);
 
   // Check location permissions and get current location when Places filter is active
@@ -137,25 +154,38 @@ export const MomentsScreen: React.FC = () => {
   const groupedMemories = React.useMemo(() => {
     const groups: { [key: string]: MemoryEntry[] } = {};
     
+    console.log(`📦 [Moments] Grouping ${filteredMemories.length} filtered memories...`);
+    
     filteredMemories.forEach((memory) => {
-      const date = new Date(memory.startTime);
-      const dateKey = date.toLocaleDateString('en-US', { 
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric'
-      });
-      
-      if (!groups[dateKey]) {
-        groups[dateKey] = [];
+      try {
+        const date = new Date(memory.startTime);
+        if (isNaN(date.getTime())) {
+          console.error(`❌ [Moments] Invalid date for memory ${memory.id}: ${memory.startTime}`);
+          return;
+        }
+        const dateKey = date.toLocaleDateString('en-US', { 
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        });
+        
+        if (!groups[dateKey]) {
+          groups[dateKey] = [];
+        }
+        groups[dateKey].push(memory);
+      } catch (error) {
+        console.error(`❌ [Moments] Error grouping memory ${memory.id}:`, error);
       }
-      groups[dateKey].push(memory);
     });
     
-    return Object.entries(groups).sort((a, b) => {
+    const result = Object.entries(groups).sort((a, b) => {
       const dateA = new Date(a[1][0].startTime);
       const dateB = new Date(b[1][0].startTime);
       return dateB.getTime() - dateA.getTime();
     });
+    
+    console.log(`✅ [Moments] Grouped into ${result.length} day groups`);
+    return result;
   }, [filteredMemories]);
 
   const handleRefresh = async () => {
@@ -198,6 +228,38 @@ export const MomentsScreen: React.FC = () => {
       console.error('Error importing photos:', error);
       Alert.alert('Import Error', 'Failed to import photos. Please try again.');
     }
+  };
+
+  const handleDeleteMemory = (memory: MemoryEntry) => {
+    Alert.alert(
+      'Delete Memory',
+      `Are you sure you want to delete "${memory.summary}"?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteMemory(memory.id);
+              // Stop audio if this memory was playing
+              if (playingAudioId === memory.id && soundRef.current) {
+                await soundRef.current.stopAsync();
+                await soundRef.current.unloadAsync();
+                soundRef.current = null;
+                setPlayingAudioId(null);
+              }
+            } catch (error) {
+              console.error('Error deleting memory:', error);
+              Alert.alert('Error', 'Failed to delete memory');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const playAudio = async (memory: MemoryEntry) => {
@@ -272,11 +334,22 @@ export const MomentsScreen: React.FC = () => {
         <View style={styles.memoryContent}>
           {/* Header */}
           <View style={styles.memoryHeader}>
-            <Text style={styles.memoryTitle} numberOfLines={2}>
-              {memory.summary}
-            </Text>
-            <View style={styles.timeBadge}>
-              <Text style={styles.timeText}>{time}</Text>
+            <View style={styles.memoryTitleContainer}>
+              <Text style={styles.memoryTitle} numberOfLines={2}>
+                {memory.summary}
+              </Text>
+            </View>
+            <View style={styles.memoryHeaderActions}>
+              <View style={styles.timeBadge}>
+                <Text style={styles.timeText}>{time}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteMemory(memory)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.deleteButtonText}>×</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -349,7 +422,8 @@ export const MomentsScreen: React.FC = () => {
         <View>
           <Text style={styles.headerTitle}>Your Moments</Text>
           <Text style={styles.headerSubtitle}>
-            {memories.length} {memories.length === 1 ? 'memory' : 'memories'}
+            {filteredMemories.length} {filteredMemories.length === 1 ? 'memory' : 'memories'}
+            {filter !== 'all' && ` (${memories.length} total)`}
           </Text>
         </View>
         <View style={styles.headerActions}>
@@ -421,12 +495,19 @@ export const MomentsScreen: React.FC = () => {
           />
         }
       >
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingText}>Loading memories...</Text>
-          </View>
-        ) : groupedMemories.length === 0 ? (
+        {(() => {
+          if (isLoading) {
+            return (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={styles.loadingText}>Loading memories...</Text>
+              </View>
+            );
+          }
+          
+          if (groupedMemories.length === 0) {
+            console.log(`⚠️ [Moments] No grouped memories to display. Filter: "${filter}", Filtered: ${filteredMemories.length}, Total: ${memories.length}, isLoading: ${isLoading}`);
+            return (
           <View style={styles.emptyContainer}>
             {filter === 'context_log' ? (
               <>
@@ -503,14 +584,21 @@ export const MomentsScreen: React.FC = () => {
               </>
             )}
           </View>
-        ) : (
-          groupedMemories.map(([date, dayMemories]) => (
-            <View key={date} style={styles.dayGroup}>
-              <Text style={styles.dateHeader}>{date}</Text>
-              {dayMemories.map(renderMemoryCard)}
-            </View>
-          ))
-        )}
+            );
+          }
+          
+          console.log(`✅ [Moments] Rendering ${groupedMemories.length} day groups with ${filteredMemories.length} memories`);
+          return (
+            <>
+              {groupedMemories.map(([date, dayMemories]) => (
+                <View key={date} style={styles.dayGroup}>
+                  <Text style={styles.dateHeader}>{date}</Text>
+                  {dayMemories.map(renderMemoryCard)}
+                </View>
+              ))}
+            </>
+          );
+        })()}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -615,6 +703,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
     paddingTop: 0,
     paddingBottom: Spacing.lg,
+    flexGrow: 1,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -717,19 +806,41 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: Spacing.xs,
   },
-  memoryTitle: {
+  memoryTitleContainer: {
     flex: 1,
+    marginRight: Spacing.sm,
+  },
+  memoryTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginRight: Spacing.sm,
     lineHeight: 20,
+  },
+  memoryHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   timeBadge: {
     backgroundColor: Colors.background,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     borderRadius: BorderRadius.small,
+  },
+  deleteButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: {
+    fontSize: 24,
+    fontWeight: '300',
+    color: Colors.textSecondary,
+    lineHeight: 24,
+    opacity: 0.7,
   },
   timeText: {
     fontSize: 12,

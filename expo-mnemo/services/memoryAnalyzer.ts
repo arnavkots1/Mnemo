@@ -81,6 +81,15 @@ export async function generateMemory(data: MemoryData): Promise<GeneratedMemory>
  */
 async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | null> {
   try {
+    console.log('🚀 [Memory Analyzer] Attempting Gemini analysis...');
+    console.log('📊 [Memory Analyzer] Data sources:', {
+      hasPhoto: !!data.photoUri,
+      hasAudio: !!data.audioUri,
+      hasLocation: !!data.location,
+      hasUserNote: !!data.userNote,
+      hasAudioEmotion: !!data.audioEmotion,
+    });
+    
     const formData = new FormData();
     
     // Add photo if available
@@ -93,10 +102,23 @@ async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | nu
         type: fileType,
         name: filename,
       } as any);
+      console.log('📸 [Memory Analyzer] Added photo to FormData');
     }
     
-    // Add audio transcript if available (would need speech-to-text)
-    // For now, we'll skip audio transcript
+    // Add audio file if available
+    if (data.audioUri) {
+      const filename = data.audioUri.split('/').pop() || 'audio.m4a';
+      const fileType = filename.endsWith('.m4a') ? 'audio/m4a' : 
+                       filename.endsWith('.mp3') ? 'audio/mp3' : 
+                       filename.endsWith('.wav') ? 'audio/wav' : 'audio/m4a';
+      
+      formData.append('audio', {
+        uri: data.audioUri,
+        type: fileType,
+        name: filename,
+      } as any);
+      console.log('🎤 [Memory Analyzer] Added audio file to FormData');
+    }
     
     // Add location
     if (data.location) {
@@ -125,22 +147,38 @@ async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | nu
     }
     
     // Call Gemini memory analysis API
+    const apiUrl = `${API_CONFIG.BASE_URL}/api/memory/analyze`;
+    console.log('🌐 [Memory Analyzer] Calling backend API:', apiUrl);
+    console.log('📡 [Memory Analyzer] API_CONFIG.BASE_URL:', API_CONFIG.BASE_URL);
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
     
-    const response = await fetch(`${API_CONFIG.BASE_URL}/api/memory/analyze`, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       body: formData,
       signal: controller.signal,
+      headers: {
+        // Don't set Content-Type - let FormData set it with boundary
+      },
     });
     
     clearTimeout(timeoutId);
     
+    console.log('📥 [Memory Analyzer] Response status:', response.status, response.statusText);
+    
     if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ [Memory Analyzer] API error response:', errorText);
+      throw new Error(`API error: ${response.status} - ${errorText}`);
     }
     
     const result = await response.json();
+    console.log('✅ [Memory Analyzer] Gemini analysis successful:', {
+      summary: result.summary,
+      usedGemini: result.usedGemini,
+      dataQuality: result.dataQuality,
+    });
     
     return {
       summary: result.summary,
@@ -154,9 +192,12 @@ async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | nu
     };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      console.log('⏱️ Gemini API timeout');
+      console.error('⏱️ [Memory Analyzer] Gemini API timeout after 30s');
+    } else if (error instanceof Error) {
+      console.error('❌ [Memory Analyzer] Gemini API error:', error.message);
+      console.error('❌ [Memory Analyzer] Error stack:', error.stack);
     } else {
-      console.log('❌ Gemini API error:', error);
+      console.error('❌ [Memory Analyzer] Unknown error:', error);
     }
     return null;
   }

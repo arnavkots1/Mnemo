@@ -85,6 +85,7 @@ function recordRequest() {
 export interface MemoryAnalysisInput {
   // Data sources
   photoPath?: string;
+  audioPath?: string; // Audio file path (for Gemini to process)
   audioTranscript?: string;
   audioEmotion?: string;
   location?: {
@@ -142,6 +143,7 @@ export async function analyzeMemoryWithGemini(
     const warnings: string[] = [];
     
     if (input.photoPath) dataSources.push('photo');
+    if (input.audioPath) dataSources.push('audio-file');
     if (input.audioTranscript) dataSources.push('audio-transcript');
     if (input.audioEmotion) dataSources.push('emotion');
     if (input.location?.placeName) dataSources.push('location');
@@ -207,7 +209,32 @@ export async function analyzeMemoryWithGemini(
       }
     }
     
-    // Add audio/voice data
+    // Add audio file if available (Gemini can process audio directly)
+    if (input.audioPath) {
+      try {
+        const audioData = fs.readFileSync(input.audioPath);
+        const base64Audio = audioData.toString('base64');
+        const ext = input.audioPath.toLowerCase().split('.').pop();
+        let mimeType = 'audio/m4a';
+        if (ext === 'mp3') mimeType = 'audio/mp3';
+        else if (ext === 'wav') mimeType = 'audio/wav';
+        else if (ext === 'm4a') mimeType = 'audio/m4a';
+        
+        promptText += '- Audio: Attached audio file\n';
+        promptParts.push({
+          inlineData: {
+            data: base64Audio,
+            mimeType: mimeType,
+          },
+        });
+        console.log('[Gemini Memory] 🎤 Added audio file to Gemini request');
+      } catch (error) {
+        console.error('[Gemini Memory] Error reading audio:', error);
+        warnings.push('Audio file could not be analyzed');
+      }
+    }
+    
+    // Add audio/voice data (transcript/emotion from frontend analysis)
     if (input.audioTranscript) {
       promptText += `- Voice transcript: "${input.audioTranscript}"\n`;
     }

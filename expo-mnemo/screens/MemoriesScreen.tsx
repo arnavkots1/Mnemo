@@ -19,6 +19,7 @@ import {
 import { useMemoryContext } from '../store/MemoryContext';
 import { MemoryEntry } from '../types/MemoryEntry';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
+import { API_CONFIG } from '../config/apiConfig';
 
 interface DailySummary {
   date: string;
@@ -33,6 +34,46 @@ export const MemoriesScreen: React.FC = () => {
   const [dailySummaries, setDailySummaries] = useState<DailySummary[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const dimensions = useWindowDimensions();
+  
+  const handleDeleteSummary = (index: number) => {
+    Alert.alert(
+      'Delete Summary',
+      `Are you sure you want to delete the summary for ${formatDate(dailySummaries[index].date)}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            const updated = dailySummaries.filter((_, i) => i !== index);
+            setDailySummaries(updated);
+          },
+        },
+      ]
+    );
+  };
+  
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+  };
   
   // Responsive sizing
   const isSmallScreen = dimensions.width < 380;
@@ -74,32 +115,74 @@ export const MemoriesScreen: React.FC = () => {
   
   const generateDailySummaries = async () => {
     try {
-      // Group memories by day
-      const grouped = new Map<string, MemoryEntry[]>();
+      console.log('🚀 [Memories] Calling backend API for daily summaries...');
       
-      memories.forEach(memory => {
-        const date = new Date(memory.startTime).toDateString();
-        if (!grouped.has(date)) {
-          grouped.set(date, []);
-        }
-        grouped.get(date)!.push(memory);
+      // Call backend API for AI-powered summaries
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for Gemini
+      
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/memory/daily-summaries`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ memories }),
+        signal: controller.signal,
       });
       
-      // Generate summaries for each day
-      const summaries: DailySummary[] = [];
+      clearTimeout(timeoutId);
       
-      for (const [date, dayMemories] of grouped.entries()) {
-        const summary = generateSummaryForDay(dayMemories, date);
-        summaries.push(summary);
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
       }
       
-      // Sort by date (newest first)
-      summaries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const result = await response.json();
+      console.log(`✅ [Memories] Backend generated ${result.summaries?.length || 0} summaries`);
+      
+      // Convert backend format to local format
+      const summaries: DailySummary[] = (result.summaries || []).map((s: any) => ({
+        date: s.date,
+        count: s.count,
+        summary: s.summary,
+        highlights: s.highlights || [],
+        memories: memories.filter(m => {
+          const memoryDate = new Date(m.startTime).toDateString();
+          return memoryDate === s.date;
+        }),
+      }));
       
       setDailySummaries(summaries);
     } catch (error) {
-      console.error('Error generating summaries:', error);
+      console.error('❌ [Memories] Error calling backend, using local fallback:', error);
+      // Fallback to local generation
+      generateLocalSummaries();
     }
+  };
+  
+  const generateLocalSummaries = () => {
+    // Group memories by day
+    const grouped = new Map<string, MemoryEntry[]>();
+    
+    memories.forEach(memory => {
+      const date = new Date(memory.startTime).toDateString();
+      if (!grouped.has(date)) {
+        grouped.set(date, []);
+      }
+      grouped.get(date)!.push(memory);
+    });
+    
+    // Generate summaries for each day
+    const summaries: DailySummary[] = [];
+    
+    for (const [date, dayMemories] of grouped.entries()) {
+      const summary = generateSummaryForDay(dayMemories, date);
+      summaries.push(summary);
+    }
+    
+    // Sort by date (newest first)
+    summaries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    setDailySummaries(summaries);
   };
   
   const generateSummaryForDay = (dayMemories: MemoryEntry[], date: string): DailySummary => {
@@ -159,25 +242,6 @@ export const MemoriesScreen: React.FC = () => {
     }
   };
   
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (date.toDateString() === today.toDateString()) {
-      return 'Today';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    } else {
-      return date.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        month: 'short', 
-        day: 'numeric' 
-      });
-    }
-  };
-  
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -230,10 +294,19 @@ export const MemoriesScreen: React.FC = () => {
                 <Text style={[styles.summaryDate, { fontSize: dateSize }]}>
                   {formatDate(summary.date)}
                 </Text>
-                <View style={styles.countBadge}>
-                  <Text style={[styles.countText, { fontSize: countSize }]}>
-                    {summary.count} {summary.count === 1 ? 'memory' : 'memories'}
-                  </Text>
+                <View style={styles.summaryHeaderActions}>
+                  <View style={styles.countBadge}>
+                    <Text style={[styles.countText, { fontSize: countSize }]}>
+                      {summary.count} {summary.count === 1 ? 'memory' : 'memories'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.deleteSummaryButton}
+                    onPress={() => handleDeleteSummary(index)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={styles.deleteSummaryButtonText}>×</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
               
@@ -354,6 +427,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.sm,
   },
+  summaryHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   summaryDate: {
     fontWeight: '700',
     color: Colors.text,
@@ -364,6 +442,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     borderRadius: BorderRadius.small,
+  },
+  deleteSummaryButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteSummaryButtonText: {
+    fontSize: 24,
+    fontWeight: '300',
+    color: Colors.textSecondary,
+    lineHeight: 24,
+    opacity: 0.7,
   },
   countText: {
     color: Colors.primary,
