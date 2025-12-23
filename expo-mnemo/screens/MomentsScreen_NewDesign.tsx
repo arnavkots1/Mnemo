@@ -24,7 +24,7 @@ import { getAudioUri } from '../services/audioStorageService';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
 
-type FilterType = 'all' | MemoryKind;
+type FilterType = 'all' | MemoryKind | 'audio' | 'context_log'; // Support legacy filter names
 
 export const MomentsScreen: React.FC = () => {
   const { memories, refreshMemories, addMemory, deleteAllMemories, isLoading } = useMemoryContext();
@@ -54,6 +54,8 @@ export const MomentsScreen: React.FC = () => {
 
   const filteredMemories = React.useMemo(() => {
     if (filter === 'all') return memories;
+    if (filter === 'audio') return memories.filter(m => m.kind === 'emotional');
+    if (filter === 'context_log') return memories.filter(m => m.kind === 'context');
     return memories.filter(m => m.kind === filter);
   }, [memories, filter]);
 
@@ -143,7 +145,7 @@ export const MomentsScreen: React.FC = () => {
 
       if (!memory.details?.audioPath) return;
       
-      const permanentPath = getAudioUri(memory.details.audioPath);
+      const permanentPath = await getAudioUri(memory.details.audioPath);
       if (!permanentPath) return;
 
       const fileInfo = await FileSystem.getInfoAsync(permanentPath);
@@ -186,8 +188,8 @@ export const MomentsScreen: React.FC = () => {
         <View style={styles.memoryIconBadge}>
           <Text style={styles.memoryIcon}>
             {memory.kind === 'photo' ? '📸' : 
-             memory.kind === 'audio' ? '🎙️' : 
-             memory.kind === 'context_log' ? '📍' : '✨'}
+             memory.kind === 'emotional' ? '🎙️' : 
+             memory.kind === 'context' ? '📍' : '✨'}
           </Text>
         </View>
 
@@ -204,9 +206,9 @@ export const MomentsScreen: React.FC = () => {
           </View>
 
           {/* Description */}
-          {memory.description && (
+          {memory.details?.description && (
             <Text style={styles.memoryDescription} numberOfLines={2}>
-              {memory.description}
+              {String(memory.details.description)}
             </Text>
           )}
 
@@ -220,7 +222,7 @@ export const MomentsScreen: React.FC = () => {
           )}
 
           {/* Audio Player */}
-          {memory.kind === 'audio' && memory.details?.audioPath && (
+          {memory.kind === 'emotional' && memory.details?.audioPath && (
             <TouchableOpacity 
               style={styles.audioPlayer}
               onPress={() => playAudio(memory)}
@@ -253,7 +255,7 @@ export const MomentsScreen: React.FC = () => {
           {/* Tags */}
           {memory.details?.tags && memory.details.tags.length > 0 && (
             <View style={styles.tagsContainer}>
-              {memory.details.tags.slice(0, 3).map((tag, index) => (
+              {memory.details.tags.slice(0, 3).map((tag: string, index: number) => (
                 <View key={index} style={styles.tag}>
                   <Text style={styles.tagText}>{tag}</Text>
                 </View>
@@ -296,6 +298,7 @@ export const MomentsScreen: React.FC = () => {
         horizontal 
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filtersContainer}
+        style={styles.filtersScrollView}
       >
         <TouchableOpacity
           style={[styles.filterPill, filter === 'all' && styles.filterPillActive]}
@@ -435,10 +438,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.textPrimary,
   },
+  filtersScrollView: {
+    marginBottom: 0,
+    maxHeight: 50,
+  },
   filtersContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.xs,
-    gap: Spacing.xs,
+    paddingTop: Spacing.xs,
+    paddingBottom: 0,
+    gap: Spacing.sm,
   },
   filterPill: {
     paddingHorizontal: 12,
@@ -469,7 +477,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
+    paddingTop: 0,
+    paddingBottom: Spacing.lg,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -486,7 +495,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 80,
-    paddingHorizontal: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
   },
   emptyIcon: {
     width: 80,

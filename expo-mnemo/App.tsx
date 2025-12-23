@@ -14,9 +14,9 @@ import { StatusBar } from 'expo-status-bar';
 import { MemoryProvider, useMemoryContext } from './store/MemoryContext';
 import { SettingsProvider, useSettingsContext } from './store/SettingsContext';
 import { CaptureStackNavigator } from './navigation/CaptureStackNavigator';
-import { MomentsScreen } from './screens/MomentsScreen';
-import { MemoriesScreen } from './screens/MemoriesScreen'; // NEW 5th tab
-import { VisionScreen } from './screens/VisionScreen';
+import { MomentsScreen } from './screens/MomentsScreen_NewDesign';
+import { MemoriesScreen } from './screens/MemoriesScreen';
+import { VisionScreen } from './screens/VisionScreen_NewDesign';
 import { SettingsScreen } from './screens/SettingsScreen_NewDesign';
 import { locationService } from './services/LocationService';
 import { initializeApiConfig } from './config/apiConfig';

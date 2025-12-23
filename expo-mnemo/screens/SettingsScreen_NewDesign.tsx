@@ -139,27 +139,7 @@ export const SettingsScreen: React.FC = () => {
             </View>
           </View>
 
-          <View style={styles.settingCard}>
-            <View style={styles.settingHeader}>
-              <View style={[styles.settingIconBadge, { width: iconSize + 16, height: iconSize + 16 }]}>
-                <Text style={{ fontSize: iconSize }}>📸</Text>
-              </View>
-              <View style={[styles.settingInfo, { flex: 1, marginRight: Spacing.sm }]}>
-                <Text style={[styles.settingLabel, { fontSize: labelSize }]} numberOfLines={1}>
-                  Photo Analysis
-                </Text>
-                <Text style={[styles.settingDescription, { fontSize: descSize }]} numberOfLines={2}>
-                  Use AI for photos
-                </Text>
-              </View>
-              <Switch
-                value={settings.allowPhotoAnalysis}
-                onValueChange={(value) => handleToggle('allowPhotoAnalysis', value)}
-                trackColor={{ false: Colors.border, true: Colors.primary }}
-                thumbColor={Colors.cardLight}
-              />
-            </View>
-          </View>
+          {/* Photo Analysis removed - not in Settings type */}
 
           <View style={styles.settingCard}>
             <View style={styles.settingHeader}>

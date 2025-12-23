@@ -15,6 +15,12 @@ import { configureImageAnalysis } from '../services/imageAnalysisService';
 const BACKEND_API_URL =
   process.env.EXPO_PUBLIC_API_URL || 'http://192.168.88.10:3000/api'; // override with EXPO_PUBLIC_API_URL
 
+// Export API config for use in services
+export const API_CONFIG = {
+  BASE_URL: BACKEND_API_URL.replace('/api', ''), // Base URL without /api
+  API_URL: BACKEND_API_URL, // Full API URL
+};
+
 /**
  * Initialize API configuration
  * Called automatically when app starts

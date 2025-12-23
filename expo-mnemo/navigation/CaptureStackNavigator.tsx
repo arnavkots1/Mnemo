@@ -8,8 +8,8 @@
 
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { CaptureScreen } from '../screens/CaptureScreen';
-import { EmotionalSessionScreen } from '../screens/EmotionalSessionScreen';
+import { CaptureScreen } from '../screens/CaptureScreen_NewDesign';
+import { EmotionalSessionScreen } from '../screens/EmotionalSessionScreen_Animated';
 
 export type CaptureStackParamList = {
   Capture: undefined;

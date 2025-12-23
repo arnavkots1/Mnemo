@@ -632,6 +632,30 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 22,
   },
+  emptyWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3CD',
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.md,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#FFE69C',
+  },
+  emptyWarningIcon: {
+    fontSize: 32,
+    marginRight: Spacing.sm,
+  },
+  emptyWarningTitle: {
+    fontWeight: '700',
+    color: '#856404',
+    marginBottom: 2,
+  },
+  emptyWarningText: {
+    color: '#856404',
+    lineHeight: 16,
+  },
 });
 
 
