@@ -196,10 +196,17 @@ export async function analyzeMemoryWithGemini(
     let promptText = `You are an intelligent memory assistant. Analyze the provided data and create a rich, meaningful memory description.
 
 **Your task:**
-1. Create a brief, natural summary (3-8 words) - NOT generic, be specific to the content
-2. Write a detailed, engaging description (2-3 sentences) that captures the moment
-3. Suggest 3-5 relevant tags
+1. Create a brief, natural summary (3-8 words) - NOT generic, be SPECIFIC and DESCRIPTIVE based on the actual content
+2. Write a detailed, engaging description (2-4 sentences) that captures the moment with context and meaning
+3. Suggest 3-5 relevant tags that help categorize and find this memory
 4. If analyzing voice/audio, determine the primary emotion (happy, sad, calm, excited, neutral, surprised)
+
+**IMPORTANT:** 
+- Be creative and descriptive even with limited data
+- Avoid generic phrases like "neutral moment captured" or "memory created"
+- Use the available context (time, location, notes) to create something meaningful
+- If data is limited, acknowledge it but still create the best description possible
+- Make it feel personal and specific, not robotic
 
 **Available data:**
 `;

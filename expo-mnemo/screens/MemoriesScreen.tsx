@@ -26,8 +26,11 @@ interface DailySummary {
   date: string;
   count: number;
   summary: string;
+  description?: string; // Detailed description from Gemini
   highlights: string[];
   memories: MemoryEntry[];
+  warnings?: string[]; // Data quality warnings
+  dataQuality?: 'excellent' | 'good' | 'limited' | 'minimal'; // Data quality level
 }
 
 export const MemoriesScreen: React.FC = () => {
@@ -175,11 +178,14 @@ export const MemoriesScreen: React.FC = () => {
         date: s.date,
         count: s.count,
         summary: s.summary,
+        description: s.description || '', // Include description from backend
         highlights: s.highlights || [],
         memories: moments.filter(m => {
           const momentDate = new Date(m.startTime).toDateString();
           return momentDate === s.date;
         }),
+        warnings: s.warnings || [], // Include warnings from backend
+        dataQuality: s.dataQuality || 'limited', // Include data quality
       }));
       
       setDailySummaries(summaries);
@@ -396,6 +402,24 @@ export const MemoriesScreen: React.FC = () => {
                 {summary.summary}
               </Text>
               
+              {/* Data Quality Warning */}
+              {summary.warnings && summary.warnings.length > 0 && (
+                <View style={styles.warningContainer}>
+                  <Text style={[styles.warningIcon, { fontSize: summarySize }]}>⚠️</Text>
+                  <Text style={[styles.warningText, { fontSize: countSize }]}>
+                    {summary.warnings.join('. ')}
+                  </Text>
+                </View>
+              )}
+              
+              {summary.dataQuality === 'minimal' || summary.dataQuality === 'limited' ? (
+                <View style={styles.qualityBadge}>
+                  <Text style={[styles.qualityText, { fontSize: countSize }]}>
+                    Limited data available
+                  </Text>
+                </View>
+              ) : null}
+              
               {summary.highlights.length > 0 && (
                 <View style={styles.highlightsContainer}>
                   <Text style={[styles.highlightsTitle, { fontSize: countSize }]}>
@@ -545,9 +569,47 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   summaryText: {
-    color: Colors.textSecondary,
+    color: Colors.textPrimary,
+    fontWeight: '600',
     lineHeight: 22,
+    marginBottom: Spacing.sm,
+  },
+  descriptionText: {
+    color: Colors.textSecondary,
+    lineHeight: 20,
     marginBottom: Spacing.md,
+    opacity: 0.9,
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+    borderRadius: BorderRadius.medium,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 193, 7, 0.3)',
+  },
+  warningIcon: {
+    marginRight: Spacing.xs,
+    color: '#FFC107',
+  },
+  warningText: {
+    flex: 1,
+    color: '#FFC107',
+    lineHeight: 16,
+  },
+  qualityBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 193, 7, 0.15)',
+    borderRadius: BorderRadius.small,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  qualityText: {
+    color: '#FFC107',
+    fontWeight: '500',
   },
   highlightsContainer: {
     marginTop: Spacing.xs,
