@@ -341,6 +341,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFCCCC',
     width: '100%',
+    overflow: 'hidden',
   },
   dangerHeader: {
     flexDirection: 'row',
@@ -362,6 +363,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     flexShrink: 1,
     width: '100%',
+    flexWrap: 'wrap',
+    marginTop: 4,
   },
   dangerButton: {
     backgroundColor: '#D32F2F',

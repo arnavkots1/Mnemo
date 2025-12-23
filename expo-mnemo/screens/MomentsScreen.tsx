@@ -404,8 +404,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingTop: 36, // tighter top padding to reduce empty space
-    paddingBottom: Spacing.sm,
+    paddingTop: 50, // proper space for notch/status bar
+    paddingBottom: Spacing.md, // more breathing room
     paddingHorizontal: Spacing.lg,
     backgroundColor: Colors.cardLight,
     borderBottomLeftRadius: BorderRadius.large,
@@ -453,8 +453,9 @@ const styles = StyleSheet.create({
   },
   filtersContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: 4,
-    gap: Spacing.xs,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm, // more space between filter buttons
+    marginBottom: 0, // NO gap below filters - content starts immediately
   },
   filterPill: {
     paddingHorizontal: 12,
@@ -484,8 +485,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.xs,
+    paddingTop: 0, // NO gap - first date starts immediately below filters
     paddingBottom: Spacing.lg,
+    flexGrow: 0,
   },
   loadingContainer: {
     alignItems: 'center',
