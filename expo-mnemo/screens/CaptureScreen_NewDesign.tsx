@@ -1,5 +1,5 @@
 /**
- * CaptureScreen - Home screen with new soft pastel design
+ * CaptureScreen - Home screen - FULLY RESPONSIVE
  */
 
 import React from 'react';
@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,6 +23,16 @@ type CaptureScreenNavigationProp = NativeStackNavigationProp<CaptureStackParamLi
 export const CaptureScreen: React.FC = () => {
   const navigation = useNavigation<CaptureScreenNavigationProp>();
   const { settings } = useSettingsContext();
+  const dimensions = useWindowDimensions();
+  
+  // Responsive sizing
+  const isSmallScreen = dimensions.width < 380;
+  const isTinyScreen = dimensions.width < 350;
+  const heroTitleSize = isTinyScreen ? 36 : isSmallScreen ? 42 : 48;
+  const heroSubSize = isTinyScreen ? 14 : isSmallScreen ? 15 : 16;
+  const cardTitleSize = isTinyScreen ? 18 : isSmallScreen ? 20 : 22;
+  const cardDescSize = isTinyScreen ? 12 : isSmallScreen ? 13 : 14;
+  const badgeTextSize = isTinyScreen ? 9 : 10;
   
   const handleStartCapture = () => {
     if (!settings.allowAudioEmotionalCapture) {
