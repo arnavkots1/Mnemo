@@ -43,9 +43,14 @@ export const MemoriesScreen: React.FC = () => {
   const summarySize = isTinyScreen ? 13 : isSmallScreen ? 14 : 15;
   const countSize = isTinyScreen ? 11 : isSmallScreen ? 12 : 13;
   
+  // DO NOT auto-generate on mount - only generate when:
+  // 1. User clicks "Generate Now" button
+  // 2. End of day (11:55 PM)
+  // This keeps Memories tab empty until explicitly generated
   useEffect(() => {
-    generateDailySummaries();
-  }, [memories]);
+    // Load previously generated summaries from storage if any
+    // (Optional: implement persistent storage later)
+  }, []);
   
   // Check for end of day and auto-generate
   useEffect(() => {
@@ -58,6 +63,7 @@ export const MemoriesScreen: React.FC = () => {
       if (hour === 23 && minute === 55) {
         console.log('🌙 End of day - auto-generating memory summary');
         generateDailySummaries();
+        // TODO: Save to AsyncStorage for persistence
       }
     };
     
@@ -136,10 +142,16 @@ export const MemoriesScreen: React.FC = () => {
   };
   
   const handleGenerateNow = async () => {
+    if (memories.length === 0) {
+      Alert.alert('No Moments Yet', 'Add some moments first, then generate memories from them.');
+      return;
+    }
+    
     setIsGenerating(true);
     try {
       await generateDailySummaries();
-      Alert.alert('✨ Generated!', 'Memory summaries updated');
+      Alert.alert('✨ Generated!', `Created summaries from ${memories.length} moment${memories.length === 1 ? '' : 's'}`);
+      // TODO: Save to AsyncStorage for persistence
     } catch (error) {
       Alert.alert('Error', 'Failed to generate summaries');
     } finally {

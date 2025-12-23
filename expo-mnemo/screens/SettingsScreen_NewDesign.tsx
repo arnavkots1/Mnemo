@@ -270,6 +270,7 @@ const styles = StyleSheet.create({
   subtitle: {
     color: Colors.textSecondary,
     fontWeight: '500',
+    flexShrink: 1,
   },
   scrollView: {
     flex: 1,
@@ -339,6 +340,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderWidth: 1,
     borderColor: '#FFCCCC',
+    width: '100%',
   },
   dangerHeader: {
     flexDirection: 'row',
@@ -357,7 +359,9 @@ const styles = StyleSheet.create({
   },
   dangerDescription: {
     color: '#B71C1C',
-    lineHeight: 16,
+    lineHeight: 18,
+    flexShrink: 1,
+    width: '100%',
   },
   dangerButton: {
     backgroundColor: '#D32F2F',

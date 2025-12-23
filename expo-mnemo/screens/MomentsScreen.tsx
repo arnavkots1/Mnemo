@@ -14,6 +14,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { useFocusEffect } from '@react-navigation/native';
@@ -32,6 +33,13 @@ export const MomentsScreen: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>('all');
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
+  const dimensions = useWindowDimensions();
+  const isSmallScreen = dimensions.width < 380;
+  const isTinyScreen = dimensions.width < 350;
+  const headerTitleSize = isTinyScreen ? 24 : isSmallScreen ? 26 : 28;
+  const headerSubtitleSize = isTinyScreen ? 12 : isSmallScreen ? 13 : 14;
+  const filterFontSize = isTinyScreen ? 11 : isSmallScreen ? 12 : 13;
+  const filterHeight = isTinyScreen ? 26 : 28;
   
   useFocusEffect(
     useCallback(() => {
@@ -278,8 +286,8 @@ export const MomentsScreen: React.FC = () => {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Your Moments</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerTitle, { fontSize: headerTitleSize }]}>Your Moments</Text>
+          <Text style={[styles.headerSubtitle, { fontSize: headerSubtitleSize }]}>
             {memories.length} {memories.length === 1 ? 'memory' : 'memories'}
           </Text>
         </View>
@@ -306,34 +314,34 @@ export const MomentsScreen: React.FC = () => {
         contentContainerStyle={styles.filtersContainer}
       >
         <TouchableOpacity
-          style={[styles.filterPill, filter === 'all' && styles.filterPillActive]}
+          style={[styles.filterPill, { height: filterHeight }, filter === 'all' && styles.filterPillActive]}
           onPress={() => setFilter('all')}
         >
-          <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>
+          <Text style={[styles.filterText, { fontSize: filterFontSize }, filter === 'all' && styles.filterTextActive]}>
             All
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterPill, filter === 'photo' && styles.filterPillActive]}
+          style={[styles.filterPill, { height: filterHeight }, filter === 'photo' && styles.filterPillActive]}
           onPress={() => setFilter('photo')}
         >
-          <Text style={[styles.filterText, filter === 'photo' && styles.filterTextActive]}>
+          <Text style={[styles.filterText, { fontSize: filterFontSize }, filter === 'photo' && styles.filterTextActive]}>
             Photos
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterPill, filter === 'emotional' && styles.filterPillActive]}
+          style={[styles.filterPill, { height: filterHeight }, filter === 'emotional' && styles.filterPillActive]}
           onPress={() => setFilter('emotional')}
         >
-          <Text style={[styles.filterText, filter === 'emotional' && styles.filterTextActive]}>
+          <Text style={[styles.filterText, { fontSize: filterFontSize }, filter === 'emotional' && styles.filterTextActive]}>
             Audio
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.filterPill, filter === 'context' && styles.filterPillActive]}
+          style={[styles.filterPill, { height: filterHeight }, filter === 'context' && styles.filterPillActive]}
           onPress={() => setFilter('context')}
         >
-          <Text style={[styles.filterText, filter === 'context' && styles.filterTextActive]}>
+          <Text style={[styles.filterText, { fontSize: filterFontSize }, filter === 'context' && styles.filterTextActive]}>
             Places
           </Text>
         </TouchableOpacity>
@@ -396,8 +404,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingTop: 60,
-    paddingBottom: Spacing.md,
+    paddingTop: 36, // tighter top padding to reduce empty space
+    paddingBottom: Spacing.sm,
     paddingHorizontal: Spacing.lg,
     backgroundColor: Colors.cardLight,
     borderBottomLeftRadius: BorderRadius.large,
@@ -445,26 +453,30 @@ const styles = StyleSheet.create({
   },
   filtersContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    gap: Spacing.sm,
+    paddingVertical: 4,
+    gap: Spacing.xs,
   },
   filterPill: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.large,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
     backgroundColor: Colors.cardLight,
-    ...Shadows.small,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   filterPillActive: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   filterText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.textSecondary,
   },
   filterTextActive: {
-    color: Colors.textPrimary,
+    color: Colors.white,
     fontWeight: '700',
   },
   scrollView: {
@@ -472,7 +484,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.xs,
+    paddingBottom: Spacing.lg,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -529,7 +542,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   dayGroup: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   dateHeader: {
     fontSize: 16,
@@ -543,7 +556,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cardLight,
     borderRadius: BorderRadius.large,
     padding: Spacing.md,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
     ...Shadows.small,
   },
   memoryIconBadge: {
