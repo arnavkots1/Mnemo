@@ -24,9 +24,7 @@ interface MemoryInput {
  */
 router.post('/daily-summaries', async (req, res) => {
   try {
-    console.log(`📥 [Daily Summaries] POST /api/memory/daily-summaries received`);
-    console.log(`📥 [Daily Summaries] Request headers:`, JSON.stringify(req.headers, null, 2));
-    console.log(`📥 [Daily Summaries] Request body keys:`, Object.keys(req.body || {}));
+    // Reduced logging - only log essential info
     
     const { memories } = req.body as { memories: MemoryInput[] };
     
@@ -38,7 +36,7 @@ router.post('/daily-summaries', async (req, res) => {
       });
     }
 
-    console.log(`🚀 [Daily Summaries] Generating summaries for ${memories.length} moment${memories.length === 1 ? '' : 's'}`);
+    // Generating summaries...
 
     // Group memories by day
     const grouped = new Map<string, MemoryInput[]>();
@@ -55,7 +53,7 @@ router.post('/daily-summaries', async (req, res) => {
       }
     });
 
-    console.log(`[Daily Summaries] Grouped into ${grouped.size} days`);
+    // Grouped into days
 
     // Generate summaries for each day using Gemini
     const summaries = [];
@@ -129,7 +127,7 @@ ${memoryDetails}
     // Sort by date (newest first)
     summaries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    console.log(`[Daily Summaries] ✅ Generated ${summaries.length} summaries`);
+    console.log(`✅ [Daily Summaries] Generated ${summaries.length} daily summar${summaries.length === 1 ? 'y' : 'ies'}`);
 
     res.json({
       summaries,

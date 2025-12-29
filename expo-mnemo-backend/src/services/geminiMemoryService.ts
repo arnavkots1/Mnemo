@@ -94,15 +94,13 @@ function recordRequest() {
   dailyRequestCount++;
   const remainingToday = RATE_LIMIT_PER_DAY - dailyRequestCount;
   const remainingThisMin = RATE_LIMIT_PER_MINUTE - requestTimestamps.length;
-  
-  console.log(`[Gemini Memory] Request recorded: ${dailyRequestCount}/${RATE_LIMIT_PER_DAY} today (${remainingToday} remaining), ${requestTimestamps.length}/${RATE_LIMIT_PER_MINUTE} last min (${remainingThisMin} remaining)`);
-  
-  // Warn when approaching limits
+
+  // Only warn when approaching limits (reduced logging)
   if (remainingToday < 50) {
     console.warn(`⚠️ [Gemini Memory] Low daily quota: ${remainingToday} requests remaining`);
   }
   if (remainingThisMin < 1) {
-    console.warn(`⚠️ [Gemini Memory] Approaching per-minute limit: ${remainingThisMin} requests remaining this minute`);
+    console.warn(`⚠️ [Gemini Memory] Approaching per-minute limit`);
   }
 }
 
@@ -313,7 +311,6 @@ export async function analyzeMemoryWithGemini(
     }
 
     // Call Gemini
-    console.log('[Gemini Memory] Analyzing memory with', dataSources.length, 'data sources:', dataSources.join(', '));
     const result = await model.generateContent(promptParts);
     const response = result.response;
     const text = response.text();
@@ -324,12 +321,25 @@ export async function analyzeMemoryWithGemini(
       const jsonStr = jsonMatch ? jsonMatch[1] || jsonMatch[0] : text;
       const parsed = JSON.parse(jsonStr);
 
+      // Debug: Log what Gemini returned
+      console.log(`[Gemini Memory] Response - Summary: "${parsed.summary?.substring(0, 50)}..."`);
+      console.log(`[Gemini Memory] Response - Description: "${parsed.description?.substring(0, 80)}..."`);
+
       // Record successful request
       recordRequest();
       
-      // Clean up and validate
+      // Clean up and validate - ensure summary is not the prompt text
+      let summary = (parsed.summary || 'Memory captured').trim();
+      // Remove any prompt-like text
+      if (summary.toLowerCase().includes('create a rich') || 
+          summary.toLowerCase().includes('planning') ||
+          summary.toLowerCase().includes('midday prompt')) {
+        console.warn(`[Gemini Memory] ⚠️ Summary looks like prompt text, using description instead`);
+        summary = parsed.description?.substring(0, 50).trim() || 'Memory captured';
+      }
+      
       const result: MemoryAnalysisResult = {
-        summary: (parsed.summary || 'Memory captured').substring(0, 100),
+        summary: summary.substring(0, 100),
         description: (parsed.description || 'A moment in time').substring(0, 500),
         tags: (parsed.tags || ['memory']).slice(0, 5),
         emotion: parsed.emotion || undefined,
@@ -339,7 +349,6 @@ export async function analyzeMemoryWithGemini(
         dataSources,
       };
       
-      console.log(`[Gemini Memory] ✅ Analysis complete (${dataQuality} quality, ${dataSources.length} sources)`);
       return result;
       
     } catch (parseError) {

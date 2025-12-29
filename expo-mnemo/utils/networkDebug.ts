@@ -33,9 +33,9 @@ export async function testBackendConnection(): Promise<{
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.error(`⏱️ [NETWORK_DEBUG] Request timeout`);
+      console.error(`⏱️ [NETWORK_DEBUG] Request timeout after 15s`);
       controller.abort();
-    }, 5000); // 5 second timeout
+    }, 15000); // 15 second timeout - increased for slow networks
     
     const startTime = Date.now();
     

@@ -21,10 +21,13 @@ import { configureImageAnalysis } from '../services/imageAnalysisService';
 // Find your IP: ipconfig (Windows) or ifconfig (Mac/Linux)
 // Look for "IPv4 Address" - that's what you need
 
-const DEFAULT_IP = '172.20.10.6'; // Update this to your computer's current IP address
+const DEFAULT_IP = '192.168.1.49'; // Fallback IP if tunnel is not used
 
+// Priority: 1. EXPO_PUBLIC_API_URL env var, 2. Tunnel URL, 3. Default IP
 const BACKEND_API_URL =
-  process.env.EXPO_PUBLIC_API_URL || `http://${DEFAULT_IP}:3000/api`;
+  process.env.EXPO_PUBLIC_API_URL || 
+  (process.env.EXPO_PUBLIC_TUNNEL_URL ? `${process.env.EXPO_PUBLIC_TUNNEL_URL}/api` : null) ||
+  `http://${DEFAULT_IP}:3000/api`;
 
 // Export API config for use in services
 export const API_CONFIG = {
@@ -77,9 +80,9 @@ export async function checkBackendHealth(): Promise<boolean> {
     // Use AbortController for timeout (more compatible than AbortSignal.timeout)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.error(`⏱️ [API_CONFIG] Health check timeout after 3s`);
+      console.error(`⏱️ [API_CONFIG] Health check timeout after 10s`);
       controller.abort();
-    }, 3000);
+    }, 10000); // Increased to 10 seconds
     
     console.log(`📡 [API_CONFIG] Sending GET request to ${healthUrl}...`);
     const startTime = Date.now();

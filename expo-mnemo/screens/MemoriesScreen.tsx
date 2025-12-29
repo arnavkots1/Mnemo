@@ -398,9 +398,17 @@ export const MemoriesScreen: React.FC = () => {
                 </View>
               </View>
               
+              {/* AI-Generated Summary (Brief) */}
               <Text style={[styles.summaryText, { fontSize: summarySize }]}>
                 {summary.summary}
               </Text>
+              
+              {/* AI-Generated Description (Detailed) */}
+              {summary.description && summary.description.trim() && (
+                <Text style={[styles.descriptionText, { fontSize: summarySize - 1 }]}>
+                  {summary.description}
+                </Text>
+              )}
               
               {/* Data Quality Warning */}
               {summary.warnings && summary.warnings.length > 0 && (
@@ -571,8 +579,17 @@ const styles = StyleSheet.create({
   summaryText: {
     color: Colors.textPrimary,
     fontWeight: '600',
+    fontSize: 16,
     lineHeight: 22,
     marginBottom: Spacing.sm,
+  },
+  descriptionText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.md,
+    opacity: 0.85,
   },
   descriptionText: {
     color: Colors.textSecondary,
