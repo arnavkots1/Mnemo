@@ -14,12 +14,14 @@ import {
   Alert,
   useWindowDimensions,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useMemoryContext } from '../store/MemoryContext';
 import { useSettingsContext } from '../store/SettingsContext';
 import { locationService } from '../services/LocationService';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
 
 export const SettingsScreen: React.FC = () => {
+  const navigation = useNavigation();
   const { deleteAllMemories, addMemory } = useMemoryContext();
   const { settings, updateSettings, resetToDefaults } = useSettingsContext();
   const dimensions = useWindowDimensions();
@@ -212,6 +214,30 @@ export const SettingsScreen: React.FC = () => {
               <Text style={[styles.dangerButtonText, { fontSize: buttonTextSize }]}>Delete Everything</Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Legal */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Legal</Text>
+          <TouchableOpacity
+            style={styles.settingCard}
+            onPress={() => {
+              // @ts-ignore - navigation type
+              navigation.navigate('Legal');
+            }}
+          >
+            <View style={styles.settingHeader}>
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingLabel, { fontSize: labelSize }]}>
+                  Privacy Policy & Terms
+                </Text>
+                <Text style={[styles.settingDescription, { fontSize: descSize }]}>
+                  View our privacy policy and terms of service
+                </Text>
+              </View>
+              <Text style={[styles.chevron, { fontSize: iconSize }]}>›</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* App Info */}

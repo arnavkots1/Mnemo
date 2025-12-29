@@ -14,10 +14,10 @@ import { StatusBar } from 'expo-status-bar';
 import { MemoryProvider, useMemoryContext } from './store/MemoryContext';
 import { SettingsProvider, useSettingsContext } from './store/SettingsContext';
 import { CaptureStackNavigator } from './navigation/CaptureStackNavigator';
+import { SettingsStackNavigator } from './navigation/SettingsStackNavigator';
 import { MomentsScreen } from './screens/MomentsScreen_NewDesign';
 import { MemoriesScreen } from './screens/MemoriesScreen';
 import { VisionScreen } from './screens/VisionScreen_NewDesign';
-import { SettingsScreen } from './screens/SettingsScreen_NewDesign';
 import { locationService } from './services/LocationService';
 import { initializeApiConfig, API_CONFIG } from './config/apiConfig';
 
@@ -119,7 +119,7 @@ const AppContent: React.FC = () => {
         />
         <Tab.Screen
           name="Settings"
-          component={SettingsScreen}
+          component={SettingsStackNavigator}
           options={{
             tabBarIcon: ({ color }) => <TabIcon label="◈" color={color} />,
             tabBarLabel: 'Settings',
