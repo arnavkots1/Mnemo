@@ -174,18 +174,27 @@ export async function analyzeImageWithGemini(
       contextPrompt += `Location: ${context.location}. `;
     }
 
-    // Create prompt for Gemini
-    const prompt = `Analyze this photo and provide:
-1. A brief summary (2-5 words) describing what's in the photo
-2. A detailed description (1-2 sentences) of the scene, objects, people, or activities visible
-3. Relevant tags (3-5 words) that describe the photo
+    // Create prompt for Gemini - more creative and varied
+    const prompt = `Analyze this photo creatively and provide a unique description.
+
+**What to do:**
+1. Look at what's actually in the photo - people, objects, scenery, activities, mood, colors, setting
+2. Create a brief summary (2-5 words) that describes what's happening, not just "photo" or "moment"
+3. Write a natural description (1-2 sentences) that tells a story about this moment - vary your language and structure
+4. Suggest relevant tags (3-5 words)
+
+**Important:**
+- Be specific about what you see - describe the actual content
+- Avoid generic phrases like "A memorable moment captured" or "Photo taken with [camera]"
+- Write naturally, as if describing this to a friend
+- Vary your sentence structure - don't use the same template every time
 
 ${contextPrompt}
 
 Format your response as JSON:
 {
-  "summary": "brief summary here",
-  "description": "detailed description here",
+  "summary": "creative brief summary of what's actually in the photo",
+  "description": "natural, varied description telling the story of this moment",
   "tags": ["tag1", "tag2", "tag3"]
 }`;
 

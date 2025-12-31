@@ -86,6 +86,8 @@ export async function analyzeImage(request: ImageAnalysisRequest): Promise<Image
           signal: controller.signal,
           headers: {
             // Don't set Content-Type - let FormData set it with boundary
+            // Add bypass header for localtunnel
+            'Bypass-Tunnel-Reminder': 'true',
           },
         });
         
@@ -159,10 +161,13 @@ export async function analyzeImage(request: ImageAnalysisRequest): Promise<Image
 
 /**
  * Generate summary locally (fallback)
+ * Creates more descriptive summaries even without Gemini
  */
 function generateLocalSummary(request: ImageAnalysisRequest): ImageAnalysisResponse {
   const parts: string[] = [];
+  const descriptionParts: string[] = [];
   
+  // Time context
   if (request.timeOfDay) {
     const timeLabels: { [key: string]: string } = {
       morning: 'Morning',
@@ -170,19 +175,71 @@ function generateLocalSummary(request: ImageAnalysisRequest): ImageAnalysisRespo
       evening: 'Evening',
       night: 'Night',
     };
-    parts.push(timeLabels[request.timeOfDay] || request.timeOfDay);
+    const timeLabel = timeLabels[request.timeOfDay] || request.timeOfDay;
+    parts.push(timeLabel);
+    descriptionParts.push(`A ${timeLabel.toLowerCase()} moment`);
   }
   
+  // Day of week context
+  if (request.dayOfWeek) {
+    const dayLabels: { [key: string]: string } = {
+      monday: 'Monday',
+      tuesday: 'Tuesday',
+      wednesday: 'Wednesday',
+      thursday: 'Thursday',
+      friday: 'Friday',
+      saturday: 'Saturday',
+      sunday: 'Sunday',
+    };
+    const dayLabel = dayLabels[request.dayOfWeek.toLowerCase()] || request.dayOfWeek;
+    if (dayLabel.toLowerCase() === 'saturday' || dayLabel.toLowerCase() === 'sunday') {
+      parts.unshift(dayLabel); // Put weekend days at the start
+      descriptionParts.push(`captured on ${dayLabel}`);
+    }
+  }
+  
+  // Location context
   if (request.location?.placeName) {
     parts.push(`at ${request.location.placeName}`);
+    descriptionParts.push(`at ${request.location.placeName}`);
+  } else if (request.location?.latitude && request.location?.longitude) {
+    descriptionParts.push('with location data');
   }
   
-  const summary = parts.length > 0 ? `${parts.join(' ')} photo` : 'Photo moment';
+  // Build summary (more descriptive)
+  let summary = parts.length > 0 ? `${parts.join(' ')} photo` : 'Photo moment';
+  
+  // Make summary more varied and natural
+  const summaryVariations: { [key: string]: string[] } = {
+    'Morning photo': ['Morning capture', 'Early day moment', 'Morning snapshot', 'Dawn memory'],
+    'Afternoon photo': ['Midday capture', 'Afternoon moment', 'Daytime snapshot', 'Afternoon memory'],
+    'Evening photo': ['Evening capture', 'Dusk moment', 'Evening snapshot', 'Twilight memory'],
+    'Night photo': ['Night capture', 'Evening moment', 'Nighttime snapshot', 'After-dark memory'],
+  };
+  
+  if (summaryVariations[summary]) {
+    const variations = summaryVariations[summary];
+    summary = variations[Math.floor(Math.random() * variations.length)];
+  }
+  
+  // Build description (more detailed)
+  let description = descriptionParts.length > 0 
+    ? `${descriptionParts.join(' ')}. A captured memory worth remembering.`
+    : 'A memorable moment captured in time.';
+  
+  // Add context about the photo
+  if (request.imageUri) {
+    description += ' This photo preserves a special moment.';
+  }
+  
+  const tags = ['photo', 'memory'];
+  if (request.timeOfDay) tags.push(request.timeOfDay);
+  if (request.location) tags.push('location');
   
   return {
     summary,
-    description: `A memorable moment captured. ${summary}`,
-    tags: ['photo', 'memory'],
+    description,
+    tags: tags.slice(0, 5),
     confidence: 0.7,
   };
 }

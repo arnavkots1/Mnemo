@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { MemoryEntry, createMemoryEntry } from '../types/MemoryEntry';
 import { enhanceMemoryWithContext, getTimeOfDay, getDayOfWeek } from './memoryGenerator';
 import { analyzeImage, configureImageAnalysis } from './imageAnalysisService';
+import { createRichMemory, MemoryData } from './memoryAnalyzer';
 
 /**
  * Detect if photo was taken on this phone vs downloaded/received
@@ -335,77 +336,132 @@ export async function pickPhotosAndCreateMemories(): Promise<MemoryEntry[]> {
       
       // Log creation date for debugging
       console.log(`Photo creation date: ${creationDate.toISOString()}, Time of day: ${getTimeOfDay(creationDate)}`);
+      console.log(`📷 Photo URI: ${asset.uri}`);
+      console.log(`📷 Photo dimensions: ${asset.width}x${asset.height}`);
       
-      // Analyze image using backend (or local fallback)
-      let summary = 'Photo moment';
-      let description = 'A memorable moment captured';
-      
+      // Use Gemini AI analysis via memoryAnalyzer (PRIMARY METHOD)
+      // This provides rich, meaningful descriptions instead of generic "Morning photo"
       try {
-        const timeOfDay = getTimeOfDay(creationDate);
-        const dayOfWeek = getDayOfWeek(creationDate);
-        
-        console.log(`Analyzing image with timeOfDay: ${timeOfDay}, dayOfWeek: ${dayOfWeek}`);
-        
-        const analysis = await analyzeImage({
-          imageUri: asset.uri,
+        const memoryData: MemoryData = {
+          photoUri: asset.uri,
           location: latitude && longitude ? {
             latitude,
             longitude,
             placeName: undefined, // Will be set after reverse geocoding if needed
           } : undefined,
-          timeOfDay: timeOfDay, // Use photo's actual creation time
-          dayOfWeek: dayOfWeek,
-        });
+          timestamp: creationDate,
+          photoExif: asset.exif ? {
+            dateTime: asset.exif.DateTimeOriginal || asset.exif.DateTime,
+            make: asset.exif.Make,
+            model: asset.exif.Model,
+            gps: latitude && longitude ? {
+              latitude,
+              longitude,
+            } : undefined,
+          } : undefined,
+        };
         
-        summary = analysis.summary;
-        description = analysis.description;
+        console.log(`🚀 [Photo Service] Analyzing photo with Gemini AI...`);
         
-        console.log(`Image analysis result: ${summary}`);
+        // Use createRichMemory which uses Gemini for analysis
+        const memoryTemplate = await createRichMemory('photo', memoryData);
+        
+        // Create full memory entry with Gemini-generated summary and description
+        const memory: MemoryEntry = {
+          ...memoryTemplate,
+          id: generateUUID(), // Generate unique ID
+          details: {
+            ...memoryTemplate.details,
+            uri: asset.uri, // Local URI for the photo
+            width: asset.width,
+            height: asset.height,
+            fileName: asset.fileName,
+            fileSize: asset.fileSize,
+            exif: asset.exif, // Store raw EXIF data
+            // Store origin detection info for UI indicator
+            isDownloadedPhoto: !originDetection.likelyTakenOnPhone,
+            originConfidence: originDetection.confidence,
+          },
+        };
+        
+        console.log(`✅ [Photo Service] Gemini analysis complete: "${memory.summary}"`);
+        console.log(`   Description: ${memory.details?.description?.substring(0, 80)}...`);
+        
+        memories.push(memory);
       } catch (error: any) {
         const errorMsg = error?.message || String(error);
-        console.warn(`⚠️ Image analysis failed (${errorMsg}), using local fallback`);
+        console.warn(`⚠️ [Photo Service] Gemini analysis failed (${errorMsg}), using enhanced fallback`);
         
-        // Check if it's a timeout or network error - these are expected with slow connections
-        if (errorMsg.includes('408') || errorMsg.includes('timeout') || errorMsg.includes('network') || errorMsg.includes('Upload failed')) {
-          console.log(`ℹ️ Network/timeout issue detected - using local analysis (this is normal with slow connections)`);
+        // Check if it's a backend unavailable error (503, 502, 504) or network error
+        const isBackendUnavailable = errorMsg.includes('503') || errorMsg.includes('502') || errorMsg.includes('504') || 
+                                     errorMsg.includes('Tunnel Unavailable') || errorMsg.includes('timeout') || 
+                                     errorMsg.includes('network') || errorMsg.includes('Upload failed');
+        
+        if (isBackendUnavailable) {
+          console.log(`ℹ️ Backend unavailable - using enhanced local analysis (this is normal when backend/tunnel is down)`);
         }
         
-        // Fallback to local generation
-        const enhanced = enhanceMemoryWithContext(
-          createMemoryEntry('photo', 'Photo moment', {
-            startTime: creationDate,
-            latitude,
-            longitude,
-          })
-        );
-        summary = enhanced.summary;
-        description = enhanced.details?.description || 'A memorable moment captured';
+        // Fallback to enhanced local generation
+        const timeOfDay = getTimeOfDay(creationDate);
+        const dayOfWeek = getDayOfWeek(creationDate);
+        
+        // Create enhanced summary using available context
+        const summaryParts: string[] = [];
+        const descParts: string[] = [];
+        
+        if (timeOfDay) {
+          summaryParts.push(timeOfDay);
+          descParts.push(`A ${timeOfDay} moment`);
+        }
+        
+        if (dayOfWeek && (dayOfWeek.toLowerCase() === 'saturday' || dayOfWeek.toLowerCase() === 'sunday')) {
+          summaryParts.unshift(dayOfWeek);
+          descParts.push(`on ${dayOfWeek}`);
+        }
+        
+        if (latitude && longitude) {
+          descParts.push('with location data');
+        }
+        
+        // Build enhanced summary
+        let summary = summaryParts.length > 0 
+          ? `Memorable ${summaryParts.join(' ')} photo`
+          : 'Memorable photo moment';
+        
+        // Build enhanced description with varied language
+        const descVariations = [
+          descParts.length > 0 ? `${descParts.join(' ')}. A captured memory worth remembering.` : 'A moment captured in time.',
+          descParts.length > 0 ? `${descParts.join(' ')}. This snapshot preserves a special memory.` : 'A snapshot of a meaningful moment.',
+          descParts.length > 0 ? `${descParts.join(' ')}. Captured and saved for later.` : 'A memory preserved.',
+        ];
+        description = descVariations[Math.floor(Math.random() * descVariations.length)];
+        
+        // Don't append camera info - keep descriptions natural and varied
+        
+        // Create memory entry with enhanced fallback summary
+        const memory = createMemoryEntry('photo', summary, {
+          startTime: creationDate,
+          latitude,
+          longitude,
+          details: {
+            uri: asset.uri,
+            width: asset.width,
+            height: asset.height,
+            fileName: asset.fileName,
+            fileSize: asset.fileSize,
+            exif: asset.exif,
+            description,
+            isDownloadedPhoto: !originDetection.likelyTakenOnPhone,
+            originConfidence: originDetection.confidence,
+            // Indicate this was a fallback (not Gemini)
+            usedGemini: false,
+            dataQuality: 'limited',
+          },
+        });
+        
+        console.log(`✅ [Photo Service] Enhanced fallback summary: "${summary}"`);
+        memories.push(memory);
       }
-      
-      // Log URI for debugging
-      console.log(`📷 Photo URI: ${asset.uri}`);
-      console.log(`📷 Photo dimensions: ${asset.width}x${asset.height}`);
-      
-      // Create memory entry with analyzed summary
-      const memory = createMemoryEntry('photo', summary, {
-        startTime: creationDate,
-        latitude,
-        longitude,
-        details: {
-          uri: asset.uri, // Local URI for the photo
-          width: asset.width,
-          height: asset.height,
-          fileName: asset.fileName,
-          fileSize: asset.fileSize,
-          exif: asset.exif, // Store raw EXIF data
-          description, // Store AI-generated description
-          // Store origin detection info for UI indicator
-          isDownloadedPhoto: !originDetection.likelyTakenOnPhone,
-          originConfidence: originDetection.confidence,
-        },
-      });
-      
-      memories.push(memory);
     }
     
     return memories;
@@ -413,5 +469,16 @@ export async function pickPhotosAndCreateMemories(): Promise<MemoryEntry[]> {
     console.error('Error picking photos:', error);
     throw error;
   }
+}
+
+/**
+ * Generate a UUID v4
+ */
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 

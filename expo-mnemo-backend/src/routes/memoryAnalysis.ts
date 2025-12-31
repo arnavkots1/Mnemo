@@ -1,14 +1,15 @@
 /**
- * Memory Analysis Routes - Comprehensive memory generation using Gemini
+ * Moment Analysis Routes - Analyzes individual MOMENTS using Gemini
  * 
- * POST /api/memory/analyze - Analyze and generate memory from multiple inputs
+ * POST /api/memory/analyze - Analyze and generate moment from multiple inputs
+ * (Note: endpoint name kept as /memory/analyze for backward compatibility)
  */
 
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { analyzeMemoryWithGemini } from '../services/geminiMemoryService';
+import { analyzeMomentWithGemini } from '../services/geminiMomentsService';
 import { transcribeAudio } from '../services/audioTranscriptionService';
 
 const router = express.Router();
@@ -24,9 +25,10 @@ const upload = multer({
 /**
  * POST /api/memory/analyze
  * 
- * Comprehensive memory analysis using Gemini AI
+ * Comprehensive MOMENT analysis using Gemini AI
+ * Analyzes individual moments (photos, audio, location check-ins)
  * Accepts: photo, audio transcript, location, user notes
- * Returns: Intelligent memory description with warnings for limited data
+ * Returns: Intelligent moment description with warnings for limited data
  */
 router.post(
   '/analyze',
@@ -117,8 +119,8 @@ router.post(
       const dataSources = Object.keys(input).filter(k => input[k] && k !== 'timestamp');
       console.log('[Memory Analysis] 🔍 Analyzing with data sources:', dataSources);
 
-      // Call Gemini for comprehensive analysis
-      const result = await analyzeMemoryWithGemini(input);
+      // Call Gemini for comprehensive MOMENT analysis
+      const result = await analyzeMomentWithGemini(input);
       
       if (result) {
         console.log('[Memory Analysis] ✅ Gemini analysis successful:', {

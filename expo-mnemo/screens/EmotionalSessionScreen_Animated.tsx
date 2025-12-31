@@ -219,18 +219,62 @@ export const EmotionalSessionScreen: React.FC = () => {
       setLastEmotionDetected(emotion);
       
       if (TRIGGER_EMOTIONS.includes(emotion)) {
-        const summary = `${emotion.charAt(0).toUpperCase() + emotion.slice(1)} moment captured`;
+        // Use Gemini AI to create rich, meaningful summary instead of generic "Happy moment captured"
+        let memory: MemoryEntry;
         
-        const memory = createMemoryEntry('emotional', summary, {
-          startTime: new Date(),
-          details: {
-            emotion,
-            confidence: result.confidence,
+        try {
+          const { createRichMemory, MemoryData } = await import('../services/memoryAnalyzer');
+          
+          const memoryData: MemoryData = {
             audioUri: status.uri,
-            durationSec,
-            averageLevel,
-          },
-        });
+            timestamp: new Date(),
+            audioEmotion: {
+              emotion,
+              confidence: result.confidence,
+            },
+          };
+          
+          console.log(`🚀 [Emotional Session] Analyzing audio moment with Gemini AI...`);
+          const memoryTemplate = await createRichMemory('emotional', memoryData);
+          
+          // Generate UUID for the memory
+          const generateUUID = () => {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+              const r = Math.random() * 16 | 0;
+              const v = c === 'x' ? r : (r & 0x3 | 0x8);
+              return v.toString(16);
+            });
+          };
+          
+          memory = {
+            ...memoryTemplate,
+            id: generateUUID(),
+            details: {
+              ...memoryTemplate.details,
+              emotion,
+              confidence: result.confidence,
+              audioUri: status.uri,
+              durationSec,
+              averageLevel,
+            },
+          };
+          
+          console.log(`✅ [Emotional Session] Gemini analysis complete: "${memory.summary}"`);
+        } catch (error) {
+          console.warn(`⚠️ [Emotional Session] Gemini analysis failed, using fallback:`, error);
+          // Fallback to basic summary
+          const summary = `${emotion.charAt(0).toUpperCase() + emotion.slice(1)} moment captured`;
+          memory = createMemoryEntry('emotional', summary, {
+            startTime: new Date(),
+            details: {
+              emotion,
+              confidence: result.confidence,
+              audioUri: status.uri,
+              durationSec,
+              averageLevel,
+            },
+          });
+        }
         
         try {
           const permanentAudioUri = await saveAudioFile(status.uri, memory.id);
@@ -282,19 +326,65 @@ export const EmotionalSessionScreen: React.FC = () => {
           ]).catch(() => ({ emotion: 'neutral' as Emotion, confidence: 0.5 }));
           
           const emotion = result.emotion;
-          const summary = `${emotion.charAt(0).toUpperCase() + emotion.slice(1)} moment captured`;
           
-          const memory = createMemoryEntry('emotional', summary, {
-            startTime: sessionStartTimeRef.current || new Date(),
-            endTime: new Date(),
-            details: { 
-              emotion, 
-              confidence: result.confidence, 
-              audioUri: recordingUri, 
-              durationSec, 
-              averageLevel 
-            },
-          });
+          // Use Gemini AI to create rich, meaningful summary instead of generic "Neutral moment captured"
+          let memory: MemoryEntry;
+          
+          try {
+            const { createRichMemory, MemoryData } = await import('../services/memoryAnalyzer');
+            
+            const memoryData: MemoryData = {
+              audioUri: recordingUri,
+              timestamp: sessionStartTimeRef.current || new Date(),
+              audioEmotion: {
+                emotion,
+                confidence: result.confidence,
+              },
+            };
+            
+            console.log(`🚀 [Emotional Session] Analyzing final recording with Gemini AI...`);
+            const memoryTemplate = await createRichMemory('emotional', memoryData);
+            
+            // Generate UUID for the memory
+            const generateUUID = () => {
+              return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+              });
+            };
+            
+            memory = {
+              ...memoryTemplate,
+              id: generateUUID(),
+              endTime: new Date().toISOString(),
+              details: {
+                ...memoryTemplate.details,
+                emotion,
+                confidence: result.confidence,
+                audioUri: recordingUri,
+                durationSec,
+                averageLevel,
+              },
+            };
+            
+            console.log(`✅ [Emotional Session] Gemini analysis complete: "${memory.summary}"`);
+          } catch (error) {
+            console.warn(`⚠️ [Emotional Session] Gemini analysis failed, using fallback:`, error);
+            // Fallback to basic summary
+            const summary = `${emotion.charAt(0).toUpperCase() + emotion.slice(1)} moment captured`;
+            memory = createMemoryEntry('emotional', summary, {
+              startTime: sessionStartTimeRef.current || new Date(),
+              endTime: new Date(),
+              details: { 
+                emotion, 
+                confidence: result.confidence, 
+                audioUri: recordingUri, 
+                durationSec, 
+                averageLevel 
+              },
+            });
+          }
           
           try {
             const permanentAudioUri = await saveAudioFile(recordingUri, memory.id);

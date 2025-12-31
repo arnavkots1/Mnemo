@@ -1,108 +1,46 @@
 /**
- * Gemini Memory Service - Comprehensive memory analysis using Gemini AI
+ * Gemini Memory Service - Analyzes DAILY MEMORIES (summaries of multiple moments)
  * 
- * Uses Gemini to intelligently analyze and describe memories from:
- * - Photos (visual content)
- * - Audio/Voice (emotion, content)
- * - Location (context)
- * - User notes
+ * THIS IS FOR DAILY MEMORIES ONLY - NOT INDIVIDUAL MOMENTS
  * 
- * Works with limited data and provides warnings when data is insufficient
+ * Uses Gemini to create daily summaries from multiple moments:
+ * - Aggregates moments from a single day
+ * - Creates cohesive daily narratives
+ * - Identifies patterns and themes
  * 
- * RATE LIMITING (Free Tier):
- * - Model: gemini-2.5-flash
- * - RPM: 5 requests/minute (using 4/min with buffer)
- * - TPM: 250K tokens/minute (not tracked, but requests are small)
- * - Daily: Conservative limit of 500 requests/day
- * 
- * Rate limits are enforced before each API call. When exceeded, returns null
- * and falls back to local stub generation.
+ * Rate limiting is shared with geminiMomentsService via geminiRateLimiter
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as fs from 'fs';
+import { checkRateLimit, recordRequest } from './geminiRateLimiter';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 let genAI: GoogleGenerativeAI | null = null;
 let model: any = null;
 
-// Rate limiting - Free tier limits for gemini-2.5-flash:
-// - RPM: 5 requests/minute
-// - TPM: 250K tokens/minute (tracked separately)
-// Using conservative limits with buffer to stay within free tier
-const RATE_LIMIT_PER_MINUTE = 4; // Free tier: 5/min, using 4 to leave buffer
-const RATE_LIMIT_PER_DAY = 500; // Conservative daily limit for free tier
-const requestTimestamps: number[] = [];
-let dailyRequestCount = 0;
-let lastResetDate = new Date().toDateString();
-
 /**
  * Initialize Gemini model
  */
 function initializeGemini() {
   if (!GEMINI_API_KEY) {
-    console.warn('[Gemini Memory] No API key found');
+    console.warn('[Gemini Memories] No API key found');
     return false;
   }
 
   try {
     genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    // Use gemini-2.5-flash (available model from your API)
     model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    console.log('[Gemini Memory] ✅ Initialized successfully with gemini-2.5-flash');
+    console.log('[Gemini Memories] ✅ Initialized successfully');
     return true;
   } catch (error) {
-    console.error('[Gemini Memory] Failed to initialize with gemini-2.5-flash:', error);
+    console.error('[Gemini Memories] Failed to initialize:', error);
     return false;
   }
 }
 
-/**
- * Check rate limits
- */
-function checkRateLimit(): { allowed: boolean; reason?: string } {
-  const now = Date.now();
-  const currentDate = new Date().toDateString();
-  
-  if (currentDate !== lastResetDate) {
-    dailyRequestCount = 0;
-    lastResetDate = currentDate;
-  }
-  
-  if (dailyRequestCount >= RATE_LIMIT_PER_DAY) {
-    return { allowed: false, reason: `Daily limit reached (${RATE_LIMIT_PER_DAY}/day)` };
-  }
-  
-  const oneMinuteAgo = now - 60000;
-  while (requestTimestamps.length > 0 && requestTimestamps[0] < oneMinuteAgo) {
-    requestTimestamps.shift();
-  }
-  
-  if (requestTimestamps.length >= RATE_LIMIT_PER_MINUTE) {
-    return { allowed: false, reason: `Rate limit (${RATE_LIMIT_PER_MINUTE}/min)` };
-  }
-  
-  return { allowed: true };
-}
-
-/**
- * Record API request
- */
-function recordRequest() {
-  requestTimestamps.push(Date.now());
-  dailyRequestCount++;
-  const remainingToday = RATE_LIMIT_PER_DAY - dailyRequestCount;
-  const remainingThisMin = RATE_LIMIT_PER_MINUTE - requestTimestamps.length;
-
-  // Only warn when approaching limits (reduced logging)
-  if (remainingToday < 50) {
-    console.warn(`⚠️ [Gemini Memory] Low daily quota: ${remainingToday} requests remaining`);
-  }
-  if (remainingThisMin < 1) {
-    console.warn(`⚠️ [Gemini Memory] Approaching per-minute limit`);
-  }
-}
+// Rate limiting is now handled by geminiRateLimiter.ts (shared across all Gemini services)
 
 export interface MemoryAnalysisInput {
   // Data sources
@@ -143,13 +81,11 @@ export interface MemoryAnalysisResult {
 export async function analyzeMemoryWithGemini(
   input: MemoryAnalysisInput
 ): Promise<MemoryAnalysisResult | null> {
-  // Check rate limit BEFORE making API call
+  // Check rate limit (shared across all Gemini services)
   const rateLimitCheck = checkRateLimit();
   if (!rateLimitCheck.allowed) {
-    console.warn(`[Gemini Memory] ⚠️ Rate limit exceeded: ${rateLimitCheck.reason}`);
-    console.warn(`[Gemini Memory] Free tier limits: ${RATE_LIMIT_PER_MINUTE}/min, ${RATE_LIMIT_PER_DAY}/day`);
-    console.warn(`[Gemini Memory] Falling back to local stub generation`);
-    return null; // Will fall back to local generation in route handler
+    console.warn(`[Gemini Memories] ⚠️ ${rateLimitCheck.reason}`);
+    return null;
   }
   
   // Initialize if needed
@@ -191,20 +127,22 @@ export async function analyzeMemoryWithGemini(
     
     // Build comprehensive prompt
     let promptParts: any[] = [];
-    let promptText = `You are an intelligent memory assistant. Analyze the provided data and create a rich, meaningful memory description.
+    let promptText = `You are a creative memory storyteller. Analyze the provided data and create a unique, engaging memory description that feels personal and meaningful.
 
 **Your task:**
-1. Create a brief, natural summary (3-8 words) - NOT generic, be SPECIFIC and DESCRIPTIVE based on the actual content
-2. Write a detailed, engaging description (2-4 sentences) that captures the moment with context and meaning
+1. Create a brief, natural summary (3-8 words) - Be SPECIFIC and CREATIVE. Describe what you actually see/hear/feel, not generic labels
+2. Write a detailed, engaging description (2-4 sentences) - Tell a story about this moment. Vary your language and structure. Avoid repetitive phrases.
 3. Suggest 3-5 relevant tags that help categorize and find this memory
 4. If analyzing voice/audio, determine the primary emotion (happy, sad, calm, excited, neutral, surprised)
 
-**IMPORTANT:** 
-- Be creative and descriptive even with limited data
-- Avoid generic phrases like "neutral moment captured" or "memory created"
-- Use the available context (time, location, notes) to create something meaningful
-- If data is limited, acknowledge it but still create the best description possible
-- Make it feel personal and specific, not robotic
+**CRITICAL RULES:**
+- NEVER use phrases like "A memorable moment captured", "Morning photo", "Photo taken with [camera]", or similar generic templates
+- Vary your sentence structure - don't always start with "A" or "This"
+- Be creative and descriptive - focus on WHAT is happening, WHO might be there, WHERE it is, WHY it matters
+- If you see a photo, describe what's actually in it (people, objects, scenery, activities, mood, colors, setting)
+- If you hear audio, describe what was said or the feeling conveyed, not just "voice note"
+- Make each description unique - avoid copying the same structure or phrases
+- Write naturally, as if telling a friend about this moment
 
 **Available data:**
 `;
@@ -235,7 +173,7 @@ export async function analyzeMemoryWithGemini(
           },
         });
       } catch (error) {
-        console.error('[Gemini Memory] Error reading photo:', error);
+        console.error('[Gemini Memories] Error reading photo:', error);
         warnings.push('Photo could not be analyzed');
       }
     }
@@ -258,9 +196,9 @@ export async function analyzeMemoryWithGemini(
             mimeType: mimeType,
           },
         });
-        console.log('[Gemini Memory] 🎤 Added audio file to Gemini request');
+        console.log('[Gemini Memories] 🎤 Added audio file to request');
       } catch (error) {
-        console.error('[Gemini Memory] Error reading audio:', error);
+        console.error('[Gemini Memories] Error reading audio:', error);
         warnings.push('Audio file could not be analyzed');
       }
     }
@@ -287,20 +225,21 @@ export async function analyzeMemoryWithGemini(
     
     // Add instructions
     promptText += `
-**Instructions:**
-- Be specific and descriptive, not generic
-- If user provided a note, prioritize their words in the summary
-- Combine all available data into a cohesive description
-- Tags should be relevant and useful for searching
-- ${dataSources.length < 3 ? 'Work with limited data - be honest about what you can determine' : 'Use all available data to create a rich memory'}
+**Writing Style:**
+- Write naturally and creatively - each description should feel unique
+- Vary your sentence structure and word choice
+- Focus on the story and meaning, not just listing facts
+- If you see a photo: Describe the scene, people, objects, mood, colors, activities - what makes this moment special?
+- If you hear audio: Describe the content, emotion, and meaning - what was being expressed?
+- If user provided a note: Weave their words naturally into the description
+- ${dataSources.length < 3 ? 'Work with limited data - be creative with what you have' : 'Use all available data to create a rich, multi-layered memory'}
 
 **Response format (JSON only):**
 {
-  "summary": "specific brief summary (not generic)",
-  "description": "detailed engaging description combining all data",
+  "summary": "creative brief summary describing what's actually happening (avoid generic phrases)",
+  "description": "natural, varied description that tells a story about this moment (vary sentence structure, avoid templates)",
   "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
-  "emotion": "happy|sad|calm|excited|neutral|surprised (if voice/audio data present, otherwise omit)",
-  "reasoning": "brief explanation of your analysis (optional)"
+  "emotion": "happy|sad|calm|excited|neutral|surprised (if voice/audio data present, otherwise omit)"
 }`;
 
     // Combine prompt text with any images
@@ -321,12 +260,8 @@ export async function analyzeMemoryWithGemini(
       const jsonStr = jsonMatch ? jsonMatch[1] || jsonMatch[0] : text;
       const parsed = JSON.parse(jsonStr);
 
-      // Debug: Log what Gemini returned
-      console.log(`[Gemini Memory] Response - Summary: "${parsed.summary?.substring(0, 50)}..."`);
-      console.log(`[Gemini Memory] Response - Description: "${parsed.description?.substring(0, 80)}..."`);
-
       // Record successful request
-      recordRequest();
+      recordRequest('memories');
       
       // Clean up and validate - ensure summary is not the prompt text
       let summary = (parsed.summary || 'Memory captured').trim();
@@ -334,8 +269,8 @@ export async function analyzeMemoryWithGemini(
       if (summary.toLowerCase().includes('create a rich') || 
           summary.toLowerCase().includes('planning') ||
           summary.toLowerCase().includes('midday prompt')) {
-        console.warn(`[Gemini Memory] ⚠️ Summary looks like prompt text, using description instead`);
-        summary = parsed.description?.substring(0, 50).trim() || 'Memory captured';
+        console.warn(`[Gemini Memories] ⚠️ Generic summary, using description instead`);
+        summary = parsed.description?.substring(0, 50).trim() || 'Daily memory';
       }
       
       const result: MemoryAnalysisResult = {
@@ -352,7 +287,7 @@ export async function analyzeMemoryWithGemini(
       return result;
       
     } catch (parseError) {
-      console.warn('[Gemini Memory] JSON parse error, extracting from text');
+      console.warn('[Gemini Memories] JSON parse error, extracting from text');
       
       // Fallback parsing
       const lines = text.split('\n').filter((l: string) => l.trim());
@@ -372,7 +307,7 @@ export async function analyzeMemoryWithGemini(
       };
     }
   } catch (error) {
-    console.error('[Gemini Memory] Error:', error);
+    console.error('[Gemini Memories] Error:', error);
     return null;
   }
 }
@@ -390,7 +325,7 @@ export async function batchAnalyzeMemories(
     const rateLimitCheck = checkRateLimit();
     
     if (!rateLimitCheck.allowed) {
-      console.warn(`[Gemini Memory] Rate limit hit at item ${i + 1}/${inputs.length}`);
+      console.warn(`[Gemini Memories] Rate limit hit at item ${i + 1}/${inputs.length}`);
       // Return null for remaining items
       results.push(...Array(inputs.length - i).fill(null));
       break;

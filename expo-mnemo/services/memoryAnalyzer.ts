@@ -82,13 +82,6 @@ export async function generateMemory(data: MemoryData): Promise<GeneratedMemory>
 async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | null> {
   try {
     console.log('🚀 [Memory Analyzer] Attempting Gemini analysis...');
-    console.log('📊 [Memory Analyzer] Data sources:', {
-      hasPhoto: !!data.photoUri,
-      hasAudio: !!data.audioUri,
-      hasLocation: !!data.location,
-      hasUserNote: !!data.userNote,
-      hasAudioEmotion: !!data.audioEmotion,
-    });
     
     const formData = new FormData();
     
@@ -102,7 +95,7 @@ async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | nu
         type: fileType,
         name: filename,
       } as any);
-      console.log('📸 [Memory Analyzer] Added photo to FormData');
+      // Photo added
     }
     
     // Add audio file if available
@@ -117,7 +110,7 @@ async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | nu
         type: fileType,
         name: filename,
       } as any);
-      console.log('🎤 [Memory Analyzer] Added audio file to FormData');
+      // Audio added
     }
     
     // Add location
@@ -148,11 +141,10 @@ async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | nu
     
     // Call Gemini memory analysis API
     const apiUrl = `${API_CONFIG.BASE_URL}/api/memory/analyze`;
-    console.log('🌐 [Memory Analyzer] Calling backend API:', apiUrl);
-    console.log('📡 [Memory Analyzer] API_CONFIG.BASE_URL:', API_CONFIG.BASE_URL);
+    console.log('🌐 [Memory Analyzer] API:', apiUrl);
     
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s timeout for slow connections
     
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -160,16 +152,25 @@ async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | nu
       signal: controller.signal,
       headers: {
         // Don't set Content-Type - let FormData set it with boundary
+        // Add bypass header for localtunnel
+        'Bypass-Tunnel-Reminder': 'true',
       },
     });
     
     clearTimeout(timeoutId);
     
-    console.log('📥 [Memory Analyzer] Response status:', response.status, response.statusText);
+    console.log('📥 [Memory Analyzer] Response:', response.status);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ [Memory Analyzer] API error response:', errorText);
+      console.error(`❌ [Memory Analyzer] API error ${response.status}: ${errorText}`);
+      
+      // If backend is unavailable (503, 502, 504), fall back gracefully
+      if (response.status === 503 || response.status === 502 || response.status === 504) {
+        console.warn(`⚠️ [Memory Analyzer] Backend unavailable (${response.status}), using local analysis`);
+        return null; // Will trigger fallback
+      }
+      
       throw new Error(`API error: ${response.status} - ${errorText}`);
     }
     
@@ -239,19 +240,48 @@ async function generateMemoryLocal(data: MemoryData): Promise<GeneratedMemory> {
       tags = imageAnalysis.tags || [];
       confidence = imageAnalysis.confidence;
       
-      // Enhance with EXIF data if available
+      // Note EXIF data as source but don't append camera info to description
+      // (Gemini should incorporate this naturally if relevant, not as a template)
       if (data.photoExif) {
         dataSources.push('exif');
-        if (data.photoExif.make) {
-          description += ` Photo taken with ${data.photoExif.make}`;
-          if (data.photoExif.model) {
-            description += ` ${data.photoExif.model}`;
-          }
-          description += '.';
-        }
+        // Don't append camera info - let Gemini create natural descriptions
       }
     } catch (error) {
-      console.log('📸 Photo analysis unavailable, using fallback');
+      console.log('📸 Photo analysis unavailable, using enhanced fallback');
+      // Create more descriptive fallback summary with varied language
+      const photoParts: string[] = [];
+      const descVariations = [
+        `Captured during ${timeContext.timeOfDay || 'the day'}`,
+        `A moment from ${timeContext.timeOfDay || 'today'}`,
+        `This ${timeContext.timeOfDay || 'day'} memory`,
+        `A ${timeContext.timeOfDay || 'special'} capture`,
+      ];
+      
+      if (timeContext.timeOfDay) {
+        photoParts.push(timeContext.timeOfDay);
+      }
+      if (data.location?.placeName) {
+        photoParts.push(`at ${data.location.placeName}`);
+      }
+      
+      // Vary summary structure
+      const summaryVariations = [
+        photoParts.length > 0 ? `${photoParts.join(' ')} capture` : 'Photo memory',
+        photoParts.length > 0 ? `${timeContext.timeOfDay} scene` : 'Captured moment',
+        photoParts.length > 0 ? `Snapshot from ${timeContext.timeOfDay}` : 'Memory snapshot',
+      ];
+      
+      summary = summaryVariations[Math.floor(Math.random() * summaryVariations.length)];
+      description = descVariations[Math.floor(Math.random() * descVariations.length)];
+      if (data.location?.placeName) {
+        description += ` at ${data.location.placeName}`;
+      }
+      description += '.';
+      
+      tags = ['photo', 'memory'];
+      if (timeContext.timeOfDay) tags.push(timeContext.timeOfDay);
+      if (data.location) tags.push('location');
+      confidence = 0.6; // Lower confidence for fallback
     }
   }
 

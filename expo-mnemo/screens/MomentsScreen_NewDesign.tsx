@@ -34,6 +34,7 @@ export const MomentsScreen: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [expandedMomentId, setExpandedMomentId] = useState<string | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ placeName: string; latitude: number; longitude: number } | null>(null);
   const [locationPermissionGranted, setLocationPermissionGranted] = useState<boolean | null>(null);
@@ -48,7 +49,6 @@ export const MomentsScreen: React.FC = () => {
   
   useFocusEffect(
     useCallback(() => {
-      console.log('🔄 [MOMENTS] Screen focused - refreshing moments...');
       refreshMemories();
     }, [refreshMemories])
   );
@@ -61,20 +61,7 @@ export const MomentsScreen: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    console.log(`📊 [MOMENTS] State updated: ${memories.length} moment${memories.length === 1 ? '' : 's'} loaded`);
-    console.log(`📊 [MOMENTS] isLoading=${isLoading}, filter="${filter}"`);
-    if (memories.length > 0) {
-      console.log(`📊 [MOMENTS] Sample moment:`, {
-        id: memories[0].id,
-        kind: memories[0].kind,
-        summary: memories[0].summary,
-        startTime: memories[0].startTime,
-      });
-    } else {
-      console.log(`⚠️ [MOMENTS] No moments found in state`);
-    }
-  }, [memories.length, isLoading, filter]);
+  // Removed excessive logging
 
   const filteredMemories = React.useMemo(() => {
     let result;
@@ -87,7 +74,6 @@ export const MomentsScreen: React.FC = () => {
     } else {
       result = memories.filter(m => m.kind === filter);
     }
-    console.log(`🔍 [MOMENTS] Filter: "${filter}", Total moments: ${memories.length}, Filtered: ${result.length}`);
     return result;
   }, [memories, filter]);
 
@@ -195,7 +181,6 @@ export const MomentsScreen: React.FC = () => {
           groups[dateKey] = [];
         }
         groups[dateKey].push(moment);
-        console.log(`📅 [MOMENTS] Added moment "${moment.summary}" to group: ${dateKey}`);
       } catch (error) {
         console.error(`❌ [MOMENTS] Error grouping moment ${moment.id}:`, error);
       }
@@ -361,15 +346,21 @@ export const MomentsScreen: React.FC = () => {
   };
 
   const renderMemoryCard = (moment: MemoryEntry) => {
-    console.log(`🎨 [MOMENTS] Rendering moment card: ${moment.id} - "${moment.summary}"`);
     const time = new Date(moment.startTime).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
     });
+    
+    const isExpanded = expandedMomentId === moment.id;
 
     return (
-      <GlassSurface key={moment.id} style={styles.memoryCard} intensity={26}>
+      <TouchableOpacity
+        key={moment.id}
+        activeOpacity={0.7}
+        onPress={() => setExpandedMomentId(isExpanded ? null : moment.id)}
+      >
+        <GlassSurface style={styles.memoryCard} intensity={26}>
         {/* Memory Type Icon */}
         <View style={styles.memoryIconBadge}>
           <Text style={styles.memoryIcon}>
@@ -404,7 +395,7 @@ export const MomentsScreen: React.FC = () => {
 
           {/* Description */}
           {moment.details?.description && (
-            <Text style={styles.memoryDescription} numberOfLines={2}>
+            <Text style={styles.memoryDescription} numberOfLines={isExpanded ? undefined : 2}>
               {String(moment.details.description)}
             </Text>
           )}
@@ -445,8 +436,8 @@ export const MomentsScreen: React.FC = () => {
             </TouchableOpacity>
           )}
 
-          {/* Transcript */}
-          {moment.details?.transcript && (
+          {/* Transcript - only show when expanded */}
+          {isExpanded && moment.details?.transcript && (
             <View style={styles.transcriptContainer}>
               <Text style={styles.transcriptLabel}>Transcript:</Text>
               <Text style={styles.transcriptText}>{moment.details.transcript}</Text>
@@ -472,6 +463,7 @@ export const MomentsScreen: React.FC = () => {
           )}
         </View>
       </GlassSurface>
+      </TouchableOpacity>
     );
   };
 
@@ -647,24 +639,15 @@ export const MomentsScreen: React.FC = () => {
             );
           }
           
-          console.log(`✅ [MOMENTS] Rendering ${groupedMemories.length} day group${groupedMemories.length === 1 ? '' : 's'} with ${filteredMemories.length} moment${filteredMemories.length === 1 ? '' : 's'}`);
-          groupedMemories.forEach(([date, dayMoments]) => {
-            console.log(`   🎨 [MOMENTS] Rendering group "${date}" with ${dayMoments.length} moment${dayMoments.length === 1 ? '' : 's'}`);
-          });
+          // Rendering moments
           return (
             <>
-              {groupedMemories.map(([date, dayMoments]) => {
-                console.log(`🎨 [MOMENTS] Rendering day group "${date}" with ${dayMoments.length} moment${dayMoments.length === 1 ? '' : 's'}`);
-                return (
+              {groupedMemories.map(([date, dayMoments]) => (
                   <View key={date} style={styles.dayGroup}>
                     <Text style={[styles.dateHeader, { fontSize: dateHeaderSize }]}>{date}</Text>
-                    {dayMoments.map((moment) => {
-                      console.log(`   🎨 [MOMENTS] Rendering moment: ${moment.id} - "${moment.summary}"`);
-                      return renderMemoryCard(moment);
-                    })}
+                    {dayMoments.map((moment) => renderMemoryCard(moment))}
                   </View>
-                );
-              })}
+              ))}
             </>
           );
         })()}

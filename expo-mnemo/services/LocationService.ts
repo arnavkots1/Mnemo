@@ -13,10 +13,10 @@ import { generateContextMemorySummary, enhanceMemoryWithContext } from './memory
 
 const BACKGROUND_LOCATION_TASK = 'BACKGROUND_LOCATION_TASK';
 const SIGNIFICANT_DISTANCE_THRESHOLD = 500; // meters - only log when moved 500m in a different direction
-const FOREGROUND_POLL_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
-const MOTION_THRESHOLD = 2.0; // Much higher threshold to reduce false positives
-const MOTION_CHECK_INTERVAL = 60000; // Check motion every 60 seconds (even less frequent)
-const LOCATION_ACCURACY = Location.Accuracy.High; // High accuracy for precise location logging
+const FOREGROUND_POLL_INTERVAL = 10 * 60 * 1000; // 10 minutes in milliseconds
+const MOTION_THRESHOLD = 5.0; // Very high threshold - only detect significant movement like walking/driving
+const MOTION_CHECK_INTERVAL = 5 * 60 * 1000; // Check motion every 5 minutes (less frequent)
+const LOCATION_ACCURACY = Location.Accuracy.BestForNavigation; // Highest accuracy - GPS, WiFi, cell towers
 
 // Store last known location to detect significant movement
 let lastKnownLocation: { latitude: number; longitude: number } | null = null;
@@ -261,8 +261,16 @@ export class LocationService {
   /**
    * Start motion-based location tracking
    * Updates location when device movement is detected via accelerometer
+   * NOTE: Disabled by default - too sensitive to small phone movements
    */
   private startMotionBasedTracking(): void {
+    // DISABLED: Motion-based tracking is too sensitive
+    // It triggers on small phone movements (picking up phone, adjusting position)
+    // We only want to log when user has actually traveled 500m+
+    // The 10-minute polling is sufficient for this purpose
+    return;
+    
+    /* Original motion tracking code - disabled
     // Set accelerometer update interval (10 Hz)
     Accelerometer.setUpdateInterval(1000);
     
@@ -275,6 +283,7 @@ export class LocationService {
     motionCheckTimer = setInterval(() => {
       this.checkMotionAndUpdateLocation();
     }, MOTION_CHECK_INTERVAL);
+    */
   }
   
   /**
@@ -300,7 +309,7 @@ export class LocationService {
       
       // If change exceeds threshold, device is likely moving
       if (change > MOTION_THRESHOLD) {
-        console.log(`📱 Motion detected (change: ${change.toFixed(2)}, magnitude: ${magnitude.toFixed(2)}), updating location...`);
+        console.log(`📱 Significant motion detected (change: ${change.toFixed(2)}), checking location...`);
         // Trigger location update
         await this.pollLocation();
       }
