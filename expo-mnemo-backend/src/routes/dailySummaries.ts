@@ -26,7 +26,7 @@ router.post('/daily-summaries', async (req, res) => {
   try {
     // Reduced logging - only log essential info
     
-    const { memories } = req.body as { memories: MemoryInput[] };
+    const { memories, targetDate } = req.body as { memories: MemoryInput[]; targetDate?: string };
     
     if (!memories || !Array.isArray(memories) || memories.length === 0) {
       console.warn(`⚠️ [Daily Summaries] No memories provided in request`);
@@ -36,12 +36,36 @@ router.post('/daily-summaries', async (req, res) => {
       });
     }
 
-    // Generating summaries...
+    // If targetDate is provided, filter memories to only that day
+    let filteredMemories = memories;
+    if (targetDate) {
+      console.log(`📅 [Daily Summaries] Target date specified: ${targetDate}`);
+      filteredMemories = memories.filter(memory => {
+        try {
+          const memoryDate = new Date(memory.startTime).toDateString();
+          return memoryDate === targetDate;
+        } catch (error) {
+          console.error(`[Daily Summaries] Error parsing date for memory ${memory.id}:`, error);
+          return false;
+        }
+      });
+      
+      if (filteredMemories.length === 0) {
+        console.warn(`⚠️ [Daily Summaries] No memories found for target date: ${targetDate}`);
+        return res.json({
+          summaries: [],
+          totalDays: 0,
+          totalMemories: 0,
+        });
+      }
+      
+      console.log(`✅ [Daily Summaries] Filtered to ${filteredMemories.length} moment${filteredMemories.length === 1 ? '' : 's'} for ${targetDate}`);
+    }
 
-    // Group memories by day
+    // Group memories by day (should only be 1 day if targetDate is provided)
     const grouped = new Map<string, MemoryInput[]>();
     
-    memories.forEach(memory => {
+    filteredMemories.forEach(memory => {
       try {
         const date = new Date(memory.startTime).toDateString();
         if (!grouped.has(date)) {
@@ -53,9 +77,18 @@ router.post('/daily-summaries', async (req, res) => {
       }
     });
 
-    // Grouped into days
+    // Should only be 1 day if targetDate was provided
+    if (targetDate && grouped.size > 1) {
+      console.warn(`⚠️ [Daily Summaries] Multiple days found when targetDate was specified. Using only ${targetDate}`);
+      // Keep only the target date
+      const targetDayMemories = grouped.get(targetDate);
+      grouped.clear();
+      if (targetDayMemories) {
+        grouped.set(targetDate, targetDayMemories);
+      }
+    }
 
-    // Generate summaries for each day using Gemini
+    // Generate summaries for each day using Gemini (should only be 1 day)
     const summaries = [];
     
     for (const [date, dayMemories] of grouped.entries()) {
@@ -127,12 +160,15 @@ ${memoryDetails}
     // Sort by date (newest first)
     summaries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    console.log(`✅ [Daily Summaries] Generated ${summaries.length} daily summar${summaries.length === 1 ? 'y' : 'ies'}`);
+    // Ensure only 1 summary is returned (for the target date)
+    const finalSummaries = targetDate ? summaries.filter(s => s.date === targetDate).slice(0, 1) : summaries;
+
+    console.log(`✅ [Daily Summaries] Generated ${finalSummaries.length} daily summar${finalSummaries.length === 1 ? 'y' : 'ies'}${targetDate ? ` for ${targetDate}` : ''}`);
 
     res.json({
-      summaries,
-      totalDays: summaries.length,
-      totalMemories: memories.length,
+      summaries: finalSummaries,
+      totalDays: finalSummaries.length,
+      totalMemories: filteredMemories.length,
     });
   } catch (error) {
     console.error('[Daily Summaries] Error:', error);

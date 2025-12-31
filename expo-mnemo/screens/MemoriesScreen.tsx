@@ -22,17 +22,7 @@ import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignCo
 import { API_CONFIG, checkBackendHealth } from '../config/apiConfig';
 import { testBackendConnection, getNetworkDiagnostics } from '../utils/networkDebug';
 import { GlassSurface } from '../components/GlassSurface';
-
-interface DailySummary {
-  date: string;
-  count: number;
-  summary: string;
-  description?: string; // Detailed description from Gemini
-  highlights: string[];
-  memories: MemoryEntry[];
-  warnings?: string[]; // Data quality warnings
-  dataQuality?: 'excellent' | 'good' | 'limited' | 'minimal'; // Data quality level
-}
+import { DailySummary, loadDailySummaries, saveDailySummaries, saveDailySummary, deleteDailySummary } from '../store/DailySummariesStore';
 
 export const MemoriesScreen: React.FC = () => {
   const { memories: moments } = useMemoryContext(); // NOTE: These are MOMENTS, not memories
@@ -45,10 +35,12 @@ export const MemoriesScreen: React.FC = () => {
     console.log(`📊 [MEMORIES] Current summaries: ${dailySummaries.length}`);
   }, [moments.length, dailySummaries.length]);
   
-  const handleDeleteSummary = (index: number) => {
+  const handleDeleteSummary = async (index: number) => {
+    const summaryToDelete = dailySummaries[index];
+    
     Alert.alert(
       'Delete Summary',
-      `Are you sure you want to delete the summary for ${formatDate(dailySummaries[index].date)}?`,
+      `Are you sure you want to delete the summary for ${formatDate(summaryToDelete.date)}?`,
       [
         {
           text: 'Cancel',
@@ -57,9 +49,20 @@ export const MemoriesScreen: React.FC = () => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            const updated = dailySummaries.filter((_, i) => i !== index);
-            setDailySummaries(updated);
+          onPress: async () => {
+            try {
+              // Delete from storage
+              await deleteDailySummary(summaryToDelete.date);
+              
+              // Update local state
+              const updated = dailySummaries.filter((_, i) => i !== index);
+              setDailySummaries(updated);
+              
+              console.log(`🗑️ [MEMORIES] Deleted summary for ${summaryToDelete.date}`);
+            } catch (error) {
+              console.error(`❌ [MEMORIES] Error deleting summary:`, error);
+              Alert.alert('Error', 'Failed to delete summary');
+            }
           },
         },
       ]
@@ -94,27 +97,43 @@ export const MemoriesScreen: React.FC = () => {
   const summarySize = isTinyScreen ? 13 : isSmallScreen ? 14 : 15;
   const countSize = isTinyScreen ? 11 : isSmallScreen ? 12 : 13;
   
-  // DO NOT auto-generate on mount - only generate when:
-  // 1. User clicks "Generate Now" button
-  // 2. End of day (11:55 PM)
-  // This keeps Memories tab empty until explicitly generated
+  // Load previously generated summaries from storage on mount
   useEffect(() => {
-    // Load previously generated summaries from storage if any
-    // (Optional: implement persistent storage later)
+    const loadStoredSummaries = async () => {
+      try {
+        console.log(`📖 [MEMORIES] Loading stored summaries from AsyncStorage...`);
+        const stored = await loadDailySummaries();
+        if (stored.length > 0) {
+          console.log(`✅ [MEMORIES] Loaded ${stored.length} stored summar${stored.length === 1 ? 'y' : 'ies'}`);
+          setDailySummaries(stored);
+        } else {
+          console.log(`📭 [MEMORIES] No stored summaries found`);
+        }
+      } catch (error) {
+        console.error(`❌ [MEMORIES] Error loading stored summaries:`, error);
+      }
+    };
+    
+    loadStoredSummaries();
   }, []);
   
-  // Check for end of day and auto-generate
+  // Check for end of day and auto-generate (only for most recent day)
   useEffect(() => {
     const checkEndOfDay = () => {
       const now = new Date();
       const hour = now.getHours();
       const minute = now.getMinutes();
       
-      // Auto-generate at 11:55 PM
+      // Auto-generate at 11:55 PM (only for the most recent day)
       if (hour === 23 && minute === 55) {
-        console.log('🌙 [MEMORIES] End of day - auto-generating daily summaries');
-        generateDailySummaries();
-        // TODO: Save to AsyncStorage for persistence
+        const mostRecentDayMoments = getMostRecentDayMoments(moments);
+        if (mostRecentDayMoments.length > 0) {
+          console.log(`🌙 [MEMORIES] End of day - auto-generating daily summary for most recent day (${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'})`);
+          generateDailySummaries();
+          // Summary will be automatically saved to AsyncStorage by generateDailySummaries
+        } else {
+          console.log(`🌙 [MEMORIES] End of day - no moments to generate summary`);
+        }
       }
     };
     
@@ -125,6 +144,18 @@ export const MemoriesScreen: React.FC = () => {
   
   const generateDailySummaries = async () => {
     try {
+      // Get only moments from the most recent day
+      const mostRecentDayMoments = getMostRecentDayMoments(moments);
+      
+      if (mostRecentDayMoments.length === 0) {
+        console.log(`⚠️ [MEMORIES] No moments found for the most recent day`);
+        Alert.alert('No Moments', 'No moments found for the most recent day. Add some moments first.');
+        return;
+      }
+      
+      const mostRecentDate = new Date(mostRecentDayMoments[0].startTime).toDateString();
+      console.log(`📅 [MEMORIES] Generating summary for most recent day: ${mostRecentDate} (${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'})`);
+      
       // First check if backend is reachable
       console.log(`🔍 [MEMORIES] Checking backend health...`);
       const isHealthy = await checkBackendHealth();
@@ -137,19 +168,22 @@ export const MemoriesScreen: React.FC = () => {
       console.log(`✅ [MEMORIES] Backend is reachable`);
       
       const apiUrl = `${API_CONFIG.BASE_URL}/api/memory/daily-summaries`;
-      console.log(`🚀 [MEMORIES] Calling backend API for daily summaries from ${moments.length} moment${moments.length === 1 ? '' : 's'}...`);
+      console.log(`🚀 [MEMORIES] Calling backend API for daily summary from ${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'}...`);
       console.log(`🌐 [MEMORIES] API URL: ${apiUrl}`);
       console.log(`🌐 [MEMORIES] API_CONFIG.BASE_URL: ${API_CONFIG.BASE_URL}`);
-      console.log(`📤 [MEMORIES] Sending ${moments.length} moment${moments.length === 1 ? '' : 's'} to backend`);
+      console.log(`📤 [MEMORIES] Sending ${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'} to backend for date: ${mostRecentDate}`);
       
-      // Call backend API for AI-powered summaries
+      // Call backend API for AI-powered summaries (only for most recent day)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         console.error(`⏱️ [MEMORIES] Request timeout after 60s - aborting`);
         controller.abort();
       }, 60000); // 60s timeout for Gemini
       
-      const requestBody = JSON.stringify({ memories: moments });
+      const requestBody = JSON.stringify({ 
+        memories: mostRecentDayMoments,
+        targetDate: mostRecentDate, // Specify the target date
+      });
       console.log(`📦 [MEMORIES] Request body size: ${requestBody.length} bytes`);
       
       const response = await fetch(apiUrl, {
@@ -174,14 +208,14 @@ export const MemoriesScreen: React.FC = () => {
       const result = await response.json();
       console.log(`✅ [MEMORIES] Backend generated ${result.summaries?.length || 0} daily summar${result.summaries?.length === 1 ? 'y' : 'ies'}`);
       
-      // Convert backend format to local format
+      // Convert backend format to local format (should only be 1 summary)
       const summaries: DailySummary[] = (result.summaries || []).map((s: any) => ({
         date: s.date,
         count: s.count,
         summary: s.summary,
         description: s.description || '', // Include description from backend
         highlights: s.highlights || [],
-        memories: moments.filter(m => {
+        memories: mostRecentDayMoments.filter(m => {
           const momentDate = new Date(m.startTime).toDateString();
           return momentDate === s.date;
         }),
@@ -189,8 +223,19 @@ export const MemoriesScreen: React.FC = () => {
         dataQuality: s.dataQuality || 'limited', // Include data quality
       }));
       
-      setDailySummaries(summaries);
-      console.log(`📊 [MEMORIES] Set ${summaries.length} daily summar${summaries.length === 1 ? 'y' : 'ies'} in state`);
+      // Replace existing summary for this date if it exists, otherwise add it
+      setDailySummaries(prev => {
+        const filtered = prev.filter(s => s.date !== mostRecentDate);
+        const updated = [...filtered, ...summaries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        // Save to storage
+        saveDailySummaries(updated).catch(error => {
+          console.error(`❌ [MEMORIES] Error saving summaries to storage:`, error);
+        });
+        
+        return updated;
+      });
+      console.log(`📊 [MEMORIES] Updated summaries (${summaries.length} new summary for ${mostRecentDate})`);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         console.error(`⏱️ [MEMORIES] Request aborted (timeout or cancelled)`);
@@ -212,35 +257,55 @@ export const MemoriesScreen: React.FC = () => {
     }
   };
   
-  const generateLocalSummaries = () => {
-    console.log(`📝 [MEMORIES] Generating local summaries from ${moments.length} moment${moments.length === 1 ? '' : 's'}...`);
-    // Group moments by day
-    const grouped = new Map<string, MemoryEntry[]>();
-    
-    moments.forEach(moment => {
-      const date = new Date(moment.startTime).toDateString();
-      if (!grouped.has(date)) {
-        grouped.set(date, []);
-      }
-      grouped.get(date)!.push(moment);
-    });
-    
-    console.log(`📦 [MEMORIES] Grouped into ${grouped.size} day${grouped.size === 1 ? '' : 's'}`);
-    
-    // Generate summaries for each day
-    const summaries: DailySummary[] = [];
-    
-    for (const [date, dayMoments] of grouped.entries()) {
-      const summary = generateSummaryForDay(dayMoments, date);
-      summaries.push(summary);
-      console.log(`   📅 [MEMORIES] Generated summary for ${date}: ${dayMoments.length} moment${dayMoments.length === 1 ? '' : 's'}`);
-    }
+  /**
+   * Get moments from the most recent day only
+   */
+  const getMostRecentDayMoments = (allMoments: MemoryEntry[]): MemoryEntry[] => {
+    if (allMoments.length === 0) return [];
     
     // Sort by date (newest first)
-    summaries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const sorted = [...allMoments].sort((a, b) => 
+      new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+    );
     
-    setDailySummaries(summaries);
-    console.log(`✅ [MEMORIES] Set ${summaries.length} local summar${summaries.length === 1 ? 'y' : 'ies'} in state`);
+    // Get the most recent day
+    const mostRecentDate = new Date(sorted[0].startTime).toDateString();
+    
+    // Filter to only moments from that day
+    return sorted.filter(m => {
+      const momentDate = new Date(m.startTime).toDateString();
+      return momentDate === mostRecentDate;
+    });
+  };
+  
+  const generateLocalSummaries = () => {
+    // Get only moments from the most recent day
+    const mostRecentDayMoments = getMostRecentDayMoments(moments);
+    
+    if (mostRecentDayMoments.length === 0) {
+      console.log(`⚠️ [MEMORIES] No moments found for the most recent day`);
+      return;
+    }
+    
+    const mostRecentDate = new Date(mostRecentDayMoments[0].startTime).toDateString();
+    console.log(`📝 [MEMORIES] Generating local summary for most recent day: ${mostRecentDate} (${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'})...`);
+    
+    // Generate summary for only the most recent day
+    const summary = generateSummaryForDay(mostRecentDayMoments, mostRecentDate);
+    
+    // Replace existing summary for this date if it exists, otherwise add it
+    setDailySummaries(prev => {
+      const filtered = prev.filter(s => s.date !== mostRecentDate);
+      const updated = [...filtered, summary].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      // Save to storage
+      saveDailySummaries(updated).catch(error => {
+        console.error(`❌ [MEMORIES] Error saving summaries to storage:`, error);
+      });
+      
+      return updated;
+    });
+    console.log(`✅ [MEMORIES] Generated local summary for ${mostRecentDate}`);
   };
   
   const generateSummaryForDay = (dayMemories: MemoryEntry[], date: string): DailySummary => {
@@ -283,12 +348,18 @@ export const MemoriesScreen: React.FC = () => {
   };
   
   const handleGenerateNow = async () => {
-    console.log(`🎯 [MEMORIES] Generate Now button pressed. Available moments: ${moments.length}`);
-    if (moments.length === 0) {
-      console.log(`⚠️ [MEMORIES] No moments available for summary generation`);
-      Alert.alert('No Moments Yet', 'Add some moments first, then generate daily summaries from them.');
+    // Get only moments from the most recent day
+    const mostRecentDayMoments = getMostRecentDayMoments(moments);
+    
+    console.log(`🎯 [MEMORIES] Generate Now button pressed. Most recent day moments: ${mostRecentDayMoments.length}`);
+    if (mostRecentDayMoments.length === 0) {
+      console.log(`⚠️ [MEMORIES] No moments available for the most recent day`);
+      Alert.alert('No Moments Yet', 'Add some moments for today, then generate a daily summary.');
       return;
     }
+    
+    const mostRecentDate = new Date(mostRecentDayMoments[0].startTime).toDateString();
+    console.log(`📅 [MEMORIES] Will generate summary for: ${mostRecentDate}`);
     
     // First, test backend connection with detailed diagnostics
     console.log(`🔍 [MEMORIES] Testing backend connection before generating...`);
@@ -320,12 +391,12 @@ export const MemoriesScreen: React.FC = () => {
     setIsGenerating(true);
     try {
       await generateDailySummaries();
-      console.log(`✅ [MEMORIES] Successfully generated summaries`);
-      Alert.alert('✨ Generated!', `Created daily summaries from ${moments.length} moment${moments.length === 1 ? '' : 's'}`);
-      // TODO: Save to AsyncStorage for persistence
+      console.log(`✅ [MEMORIES] Successfully generated summary for ${mostRecentDate}`);
+      Alert.alert('✨ Generated!', `Created daily summary for ${formatDate(mostRecentDate)} from ${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'}`);
+      // Summary is automatically saved to AsyncStorage by generateDailySummaries
     } catch (error) {
-      console.error(`❌ [MEMORIES] Error generating summaries:`, error);
-      Alert.alert('Error', 'Failed to generate summaries');
+      console.error(`❌ [MEMORIES] Error generating summary:`, error);
+      Alert.alert('Error', 'Failed to generate summary');
     } finally {
       setIsGenerating(false);
     }
