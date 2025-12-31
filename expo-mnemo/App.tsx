@@ -5,8 +5,9 @@
  * Wraps app with MemoryProvider and SettingsProvider for global state management.
  */
 
-import React, { useEffect } from 'react';
-import { Text } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Text, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -130,11 +131,64 @@ const AppContent: React.FC = () => {
   );
 };
 
+const FIRST_LAUNCH_KEY = 'mnemo_first_launch_shown';
+
 export default function App() {
-  // Initialize API configuration on app startup
+  const [hasShownWelcome, setHasShownWelcome] = useState(false);
+
+  // Initialize API configuration and show welcome message on first launch
   useEffect(() => {
     initializeApiConfig();
+    checkFirstLaunch();
   }, []);
+
+  const checkFirstLaunch = async () => {
+    try {
+      const hasLaunched = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
+      if (!hasLaunched) {
+        // First launch - show comprehensive welcome message
+        setTimeout(() => {
+          Alert.alert(
+            '🎉 Welcome to Mnemo!',
+            'Your personal memory companion that captures life automatically.\n\n' +
+            '📱 HOW IT WORKS:\n\n' +
+            '🏠 Vision Tab - Create memories instantly:\n' +
+            '  • Snap a photo or record audio\n' +
+            '  • AI analyzes and generates rich descriptions\n' +
+            '  • Saved automatically to your timeline\n\n' +
+            '📍 Moments Tab - Your personal timeline:\n' +
+            '  • Individual entries (photos, audio, locations)\n' +
+            '  • Organized by date (tap to expand/collapse)\n' +
+            '  • Tap any moment to see full details\n\n' +
+            '💭 Memories Tab - Daily summaries:\n' +
+            '  • AI creates daily summaries from your moments\n' +
+            '  • Tap "Generate Now" for recent day summary\n' +
+            '  • Auto-generates at 11:55 PM daily\n\n' +
+            '⚙️ SMART FEATURES (All enabled by default):\n' +
+            '📍 Location - Logs places when you move 500m+\n' +
+            '🎙️ Voice - Captures emotional audio moments\n' +
+            '📸 Photos - Import from gallery anytime\n\n' +
+            'Customize everything in Settings tab!',
+            [
+              {
+                text: 'Got it!',
+                onPress: async () => {
+                  await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
+                  setHasShownWelcome(true);
+                },
+              },
+            ],
+            { cancelable: false }
+          );
+        }, 1500);
+      } else {
+        setHasShownWelcome(true);
+      }
+    } catch (error) {
+      console.error('Error checking first launch:', error);
+      setHasShownWelcome(true);
+    }
+  };
 
   return (
     <SettingsProvider>

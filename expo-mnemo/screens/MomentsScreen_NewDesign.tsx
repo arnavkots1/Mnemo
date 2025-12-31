@@ -444,10 +444,13 @@ export const MomentsScreen: React.FC = () => {
             </View>
           )}
 
-          {/* Location */}
-          {moment.details?.locationName && (
+          {/* Location - show when expanded */}
+          {isExpanded && (moment.placeName || moment.details?.locationName || (moment.latitude && moment.longitude)) && (
             <View style={styles.locationBadge}>
-              <Text style={styles.locationText}>📍 {moment.details.locationName}</Text>
+              <Text style={styles.locationText}>
+                📍 {moment.placeName || moment.details?.locationName || 
+                    `${moment.latitude?.toFixed(6)}°N, ${moment.longitude?.toFixed(6)}°E`}
+              </Text>
             </View>
           )}
 
@@ -459,6 +462,15 @@ export const MomentsScreen: React.FC = () => {
                   <Text style={styles.tagText}>{tag}</Text>
                 </View>
               ))}
+            </View>
+          )}
+
+          {/* Expand/Collapse Indicator */}
+          {(moment.details?.transcript || moment.placeName || moment.latitude) && (
+            <View style={styles.expandIndicator}>
+              <Text style={styles.expandText}>
+                {isExpanded ? '▲ Tap to collapse' : '▼ Tap to expand'}
+              </Text>
             </View>
           )}
         </View>
@@ -1026,6 +1038,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textPrimary,
     lineHeight: 18,
+  },
+  expandIndicator: {
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border + '40', // Semi-transparent
+  },
+  expandText: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontWeight: '500',
   },
 });
 

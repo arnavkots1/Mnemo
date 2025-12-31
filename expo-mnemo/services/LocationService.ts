@@ -85,7 +85,7 @@ async function processLocationUpdate(
   // Update last known location
   lastKnownLocation = { latitude, longitude };
   
-  // Try to get place name via reverse geocoding
+  // Try to get precise place name via reverse geocoding
   let placeName: string | undefined;
   try {
     const results = await Location.reverseGeocodeAsync({
@@ -97,12 +97,36 @@ async function processLocationUpdate(
       const result = results[0];
       const parts: string[] = [];
       
-      if (result.name) parts.push(result.name);
-      if (result.street) parts.push(result.street);
-      if (result.city) parts.push(result.city);
-      if (result.region) parts.push(result.region);
+      // Build most precise location string possible
+      // Priority: street number + street > name > district > subregion > city > region
+      if (result.streetNumber && result.street) {
+        parts.push(`${result.streetNumber} ${result.street}`);
+      } else if (result.street) {
+        parts.push(result.street);
+      } else if (result.name) {
+        parts.push(result.name);
+      }
+      
+      // Add district/neighborhood for more precision
+      if (result.district) {
+        parts.push(result.district);
+      } else if (result.subregion && result.subregion !== result.city) {
+        parts.push(result.subregion);
+      }
+      
+      // Add city
+      if (result.city) {
+        parts.push(result.city);
+      }
+      
+      // Add region/state if available
+      if (result.region && result.region !== result.city) {
+        parts.push(result.region);
+      }
       
       placeName = parts.length > 0 ? parts.join(', ') : undefined;
+      
+      console.log(`📍 Precise location: ${placeName} (${latitude.toFixed(6)}, ${longitude.toFixed(6)})`);
     }
   } catch (error) {
     console.error('Error reverse geocoding:', error);
