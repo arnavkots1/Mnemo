@@ -359,7 +359,7 @@ export const EmotionalSessionScreen: React.FC = () => {
   
   if (hasPermission === null) {
     return (
-      <LinearGradient colors={['#1a1a2e', '#0f0f1e']} style={styles.container}>
+      <LinearGradient colors={[Colors.background, Colors.cardDark]} style={styles.container}>
         <ActivityIndicator size="large" color={Colors.primary} />
         <Text style={styles.loadingText}>Requesting permissions...</Text>
       </LinearGradient>
@@ -368,14 +368,14 @@ export const EmotionalSessionScreen: React.FC = () => {
   
   if (hasPermission === false) {
     return (
-      <LinearGradient colors={['#1a1a2e', '#0f0f1e']} style={styles.container}>
+      <LinearGradient colors={[Colors.background, Colors.cardDark]} style={styles.container}>
         <Text style={styles.errorText}>Microphone permission denied</Text>
       </LinearGradient>
     );
   }
   
   return (
-    <LinearGradient colors={['#1a1a2e', '#0f0f1e']} style={styles.container}>
+    <LinearGradient colors={[Colors.background, Colors.cardDark]} style={styles.container}>
       <View style={styles.content}>
         {/* Siri-style Audio Visualizer */}
         <View style={[styles.visualizerContainer, { height: visualizerHeight }]}>
@@ -391,8 +391,8 @@ export const EmotionalSessionScreen: React.FC = () => {
                       inputRange: [0, 1],
                       outputRange: [barWidth, maxBarHeight],
                     }),
-                    backgroundColor: index < NUM_BARS / 3 ? '#22d3ee' : 
-                                   index < (NUM_BARS * 2) / 3 ? '#4ade80' : '#22d3ee',
+                    backgroundColor: index < NUM_BARS / 3 ? Colors.secondary : 
+                                   index < (NUM_BARS * 2) / 3 ? Colors.primaryLight : Colors.primary,
                     opacity: bar.interpolate({
                       inputRange: [0, 1],
                       outputRange: [0.3, 1],
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   },
   durationValue: {
     fontWeight: '800',
-    color: '#4ade80',
+    color: Colors.primary,
     letterSpacing: -2,
   },
   durationLabel: {
@@ -499,22 +499,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emotionBadge: {
-    backgroundColor: 'rgba(74, 222, 128, 0.2)',
+    backgroundColor: 'rgba(52, 55, 60, 0.7)',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.large,
     borderWidth: 1,
-    borderColor: 'rgba(74, 222, 128, 0.3)',
+    borderColor: Colors.border,
   },
   emotionText: {
     fontSize: 13,
-    color: '#4ade80',
+    color: Colors.textPrimary,
     fontWeight: '700',
   },
   endButton: {
     backgroundColor: Colors.peach,
     borderRadius: BorderRadius.large,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.peachLight,
     ...Shadows.button,
   },
   endButtonText: {

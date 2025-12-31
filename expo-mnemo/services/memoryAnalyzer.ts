@@ -189,6 +189,7 @@ async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | nu
       warnings: result.warnings || [],
       dataQuality: result.dataQuality || 'good',
       usedGemini: result.usedGemini !== false,
+      audioTranscript: result.audioTranscript || undefined,
     };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
@@ -358,6 +359,7 @@ export async function createRichMemory(
       warnings: generated.warnings || [],
       dataQuality: generated.dataQuality || 'good',
       usedGemini: generated.usedGemini !== false,
+      transcript: generated.audioTranscript || undefined,
     },
   };
 
@@ -384,6 +386,8 @@ export async function createRichMemory(
       memory.details.emotion = data.audioEmotion.emotion;
       memory.details.emotionConfidence = data.audioEmotion.confidence;
     }
+    
+    // Transcript is already stored in details above
   }
 
   if (kind === 'context' && data.location) {

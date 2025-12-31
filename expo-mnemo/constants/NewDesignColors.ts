@@ -1,75 +1,76 @@
 /**
- * DARK Theme Color Palette
- * Deep, rich colors with high contrast
+ * Dark Glass Theme Color Palette
+ * Deep graphite surfaces with warm orange accents
  */
 
 export const Colors = {
   // Backgrounds
-  background: '#0A0A0F',        // Almost black
-  backgroundLight: '#12121A',   // Very dark gray
-  cardDark: '#1A1A24',          // Dark card
-  cardLight: '#232330',         // Lighter card
-  
+  background: '#1F2125',        // Graphite
+  backgroundLight: '#2A2D31',   // Lighter graphite
+  cardDark: '#25282C',          // Deep card
+  cardLight: '#34373C',         // Glassy card
+
   // Primary colors
-  primary: '#FF6B6B',           // Vibrant red
-  primaryLight: '#FF8787',      // Light red
-  secondary: '#4ECDC4',         // Teal accent
-  accent: '#FFE66D',            // Warm yellow
-  
+  primary: '#E36C2C',           // Warm orange
+  primaryLight: '#F09A5A',      // Light orange
+  secondary: '#4C5057',         // Slate
+  accent: '#F2A15A',            // Amber
+
   // Text colors
-  text: '#FFFFFF',              // Pure white
-  textLight: '#E8E8F0',         // Off white
-  textSecondary: '#B8B8C8',     // Light gray
-  textMuted: '#7A7A8A',         // Muted gray
-  textPrimary: '#FFFFFF',       // White
-  
+  text: '#F2F2F2',              // Off white
+  textLight: '#FFFFFF',         // White
+  textSecondary: '#B8BCC4',     // Soft gray
+  textMuted: '#8B9098',         // Muted gray
+  textPrimary: '#F2F2F2',       // Off white
+
   // UI elements
-  border: '#2A2A38',            // Dark border
-  borderLight: '#3A3A48',       // Lighter border
-  
+  border: '#3E4249',            // Dark border
+  borderLight: '#4A4F57',       // Lighter border
+
   // Status colors
-  success: '#4ECDC4',           // Teal
-  warning: '#FFE66D',           // Yellow
-  error: '#FF6B6B',             // Red
-  
+  success: '#76D39B',           // Soft green
+  warning: '#F2C07B',           // Warm amber
+  error: '#F28B82',             // Warm red
+  info: '#7AB7F5',              // Cool blue
+
   // Special colors
   white: '#FFFFFF',
   black: '#000000',
-  peach: '#FF6B6B',             // Changed to red
-  peachLight: '#FF8787',        // Light red
-  charcoalDark: '#0A0A0F',      // Almost black
-  charcoalLight: '#1A1A24',     // Dark gray
-  charcoalBorder: '#2A2A38',    // Border
-  cream: '#232330',             // Dark cream
+  peach: '#E36C2C',
+  peachLight: '#F09A5A',
+  charcoalDark: '#1B1D21',
+  charcoalLight: '#2C2F34',
+  charcoalBorder: '#3E4249',
+  cream: '#1F2125',
 };
 
 export const Shadows = {
   small: {
-    shadowColor: '#000000',
+    shadowColor: 'rgba(0, 0, 0, 0.4)',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
+    shadowOpacity: 1,
+    shadowRadius: 8,
     elevation: 2,
   },
   medium: {
-    shadowColor: '#000000',
+    shadowColor: 'rgba(0, 0, 0, 0.5)',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
+    shadowOpacity: 1,
+    shadowRadius: 12,
     elevation: 4,
   },
   large: {
-    shadowColor: '#000000',
+    shadowColor: 'rgba(0, 0, 0, 0.6)',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.7,
-    shadowRadius: 16,
+    shadowOpacity: 1,
+    shadowRadius: 18,
     elevation: 8,
   },
   button: {
-    shadowColor: '#FF6B6B',
+    shadowColor: 'rgba(227, 108, 44, 0.35)',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 1,
+    shadowRadius: 12,
     elevation: 4,
   },
 };

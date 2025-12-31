@@ -19,6 +19,7 @@ import { useMemoryContext } from '../store/MemoryContext';
 import { useSettingsContext } from '../store/SettingsContext';
 import { locationService } from '../services/LocationService';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
+import { GlassSurface } from '../components/GlassSurface';
 
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -97,10 +98,10 @@ export const SettingsScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GlassSurface style={styles.header} intensity={26}>
         <Text style={[styles.title, { fontSize: titleSize }]}>Settings</Text>
         <Text style={[styles.subtitle, { fontSize: subtitleSize }]}>Privacy & preferences</Text>
-      </View>
+      </GlassSurface>
 
       <ScrollView 
         style={styles.scrollView}
@@ -108,18 +109,18 @@ export const SettingsScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Privacy Description */}
-        <View style={styles.infoCard}>
+        <GlassSurface style={styles.infoCard} intensity={24}>
           <Text style={[styles.infoTitle, { fontSize: labelSize + 1 }]}>Privacy & Data</Text>
           <Text style={[styles.infoText, { fontSize: descSize + 1 }]}>
             Your memories stay on your device. We don't collect or share your data.
           </Text>
-        </View>
+        </GlassSurface>
         
         {/* Privacy Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Privacy Settings</Text>
           
-          <View style={styles.settingCard}>
+          <GlassSurface style={styles.settingCard} intensity={22}>
             <View style={styles.settingHeader}>
               <View style={[styles.settingIconBadge, { width: iconSize + 16, height: iconSize + 16 }]}>
                 <Text style={{ fontSize: iconSize }}>🎙️</Text>
@@ -139,11 +140,11 @@ export const SettingsScreen: React.FC = () => {
                 thumbColor={Colors.cardLight}
               />
             </View>
-          </View>
+          </GlassSurface>
 
           {/* Photo Analysis removed - not in Settings type */}
 
-          <View style={styles.settingCard}>
+          <GlassSurface style={styles.settingCard} intensity={22}>
             <View style={styles.settingHeader}>
               <View style={[styles.settingIconBadge, { width: iconSize + 16, height: iconSize + 16 }]}>
                 <Text style={{ fontSize: iconSize }}>📍</Text>
@@ -163,9 +164,9 @@ export const SettingsScreen: React.FC = () => {
                 thumbColor={Colors.cardLight}
               />
             </View>
-          </View>
+          </GlassSurface>
 
-          <View style={styles.settingCard}>
+          <GlassSurface style={styles.settingCard} intensity={22}>
             <View style={styles.settingHeader}>
               <View style={[styles.settingIconBadge, { width: iconSize + 16, height: iconSize + 16 }]}>
                 <Text style={{ fontSize: iconSize }}>🚶</Text>
@@ -185,14 +186,14 @@ export const SettingsScreen: React.FC = () => {
                 thumbColor={Colors.cardLight}
               />
             </View>
-          </View>
+          </GlassSurface>
         </View>
 
         {/* Danger Zone */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Danger Zone</Text>
           
-          <View style={styles.dangerCard}>
+          <GlassSurface style={styles.dangerCard} intensity={24}>
             <View style={styles.dangerHeader}>
               <View style={[styles.dangerIconBadge, { width: iconSize + 20, height: iconSize + 20 }]}>
                 <Text style={{ fontSize: iconSize + 4 }}>⚠️</Text>
@@ -213,41 +214,42 @@ export const SettingsScreen: React.FC = () => {
             >
               <Text style={[styles.dangerButtonText, { fontSize: buttonTextSize }]}>Delete Everything</Text>
             </TouchableOpacity>
-          </View>
+          </GlassSurface>
         </View>
 
         {/* Legal */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Legal</Text>
           <TouchableOpacity
-            style={styles.settingCard}
             onPress={() => {
               // @ts-ignore - navigation type
               navigation.navigate('Legal');
             }}
           >
-            <View style={styles.settingHeader}>
-              <View style={styles.settingInfo}>
-                <Text style={[styles.settingLabel, { fontSize: labelSize }]}>
-                  Privacy Policy & Terms
-                </Text>
-                <Text style={[styles.settingDescription, { fontSize: descSize }]}>
-                  View our privacy policy and terms of service
-                </Text>
+            <GlassSurface style={styles.settingCard} intensity={22}>
+              <View style={styles.settingHeader}>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingLabel, { fontSize: labelSize }]}>
+                    Privacy Policy & Terms
+                  </Text>
+                  <Text style={[styles.settingDescription, { fontSize: descSize }]}>
+                    View our privacy policy and terms of service
+                  </Text>
+                </View>
+                <Text style={[styles.chevron, { fontSize: iconSize }]}>›</Text>
               </View>
-              <Text style={[styles.chevron, { fontSize: iconSize }]}>›</Text>
-            </View>
+            </GlassSurface>
           </TouchableOpacity>
         </View>
 
         {/* App Info */}
-        <View style={styles.infoCard}>
+        <GlassSurface style={styles.infoCard} intensity={24}>
           <Text style={[styles.appName, { fontSize: titleSize - 6 }]}>Mnemo</Text>
           <Text style={[styles.appVersion, { fontSize: descSize }]}>Version 1.0.0</Text>
           <Text style={[styles.appDescription, { fontSize: descSize + 1 }]}>
             Your personal memory companion. Private, secure, always with you.
           </Text>
-        </View>
+        </GlassSurface>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -264,13 +266,13 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.extraLarge + 20,
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.lg,
-    backgroundColor: Colors.cardLight,
+    backgroundColor: Colors.cardDark,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   title: {
     fontWeight: '800',
-    color: Colors.text,
+    color: Colors.textPrimary,
     marginBottom: Spacing.tiny,
   },
   subtitle: {
@@ -289,13 +291,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textPrimary,
     marginBottom: Spacing.sm,
     paddingHorizontal: Spacing.xs,
   },
   infoCard: {
-    backgroundColor: Colors.cardLight,
-    borderRadius: BorderRadius.medium,
+    backgroundColor: 'rgba(52, 55, 60, 0.75)',
+    borderRadius: BorderRadius.extraLarge,
     padding: Spacing.md,
     marginBottom: Spacing.md,
     borderWidth: 1,
@@ -303,7 +305,7 @@ const styles = StyleSheet.create({
   },
   infoTitle: {
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textPrimary,
     marginBottom: Spacing.xs,
   },
   infoText: {
@@ -311,8 +313,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   settingCard: {
-    backgroundColor: Colors.cardLight,
-    borderRadius: BorderRadius.medium,
+    backgroundColor: 'rgba(52, 55, 60, 0.75)',
+    borderRadius: BorderRadius.extraLarge,
     padding: Spacing.md,
     marginBottom: Spacing.sm,
     borderWidth: 1,
@@ -326,6 +328,10 @@ const styles = StyleSheet.create({
   settingIconBadge: {
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: Colors.cardDark,
+    borderRadius: BorderRadius.large,
+    borderWidth: 1,
+    borderColor: Colors.border,
     marginRight: Spacing.sm,
   },
   settingInfo: {
@@ -333,7 +339,7 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontWeight: '600',
-    color: Colors.text,
+    color: Colors.textPrimary,
     marginBottom: 2,
   },
   settingDescription: {
@@ -341,11 +347,11 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   dangerCard: {
-    backgroundColor: '#FFF0F0',
-    borderRadius: BorderRadius.medium,
+    backgroundColor: 'rgba(242, 139, 130, 0.2)',
+    borderRadius: BorderRadius.extraLarge,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: '#FFCCCC',
+    borderColor: Colors.error,
     width: '100%',
     overflow: 'hidden',
   },
@@ -361,11 +367,11 @@ const styles = StyleSheet.create({
   },
   dangerTitle: {
     fontWeight: '700',
-    color: '#D32F2F',
+    color: Colors.textPrimary,
     marginBottom: 4,
   },
   dangerDescription: {
-    color: '#B71C1C',
+    color: Colors.textSecondary,
     lineHeight: 18,
     flexShrink: 1,
     width: '100%',
@@ -373,18 +379,18 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   dangerButton: {
-    backgroundColor: '#D32F2F',
+    backgroundColor: Colors.primary,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.small,
+    borderRadius: BorderRadius.extraLarge,
     alignItems: 'center',
   },
   dangerButtonText: {
-    color: Colors.white,
+    color: Colors.textPrimary,
     fontWeight: '700',
   },
   appName: {
     fontWeight: '800',
-    color: Colors.text,
+    color: Colors.textPrimary,
     marginBottom: Spacing.tiny,
   },
   appVersion: {
@@ -395,5 +401,10 @@ const styles = StyleSheet.create({
   appDescription: {
     color: Colors.textSecondary,
     lineHeight: 18,
+  },
+  chevron: {
+    color: Colors.textMuted,
+    fontWeight: '600',
+    marginLeft: Spacing.sm,
   },
 });

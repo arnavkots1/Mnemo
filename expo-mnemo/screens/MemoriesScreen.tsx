@@ -21,6 +21,7 @@ import { MemoryEntry } from '../types/MemoryEntry';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
 import { API_CONFIG, checkBackendHealth } from '../config/apiConfig';
 import { testBackendConnection, getNetworkDiagnostics } from '../utils/networkDebug';
+import { GlassSurface } from '../components/GlassSurface';
 
 interface DailySummary {
   date: string;
@@ -333,7 +334,7 @@ export const MemoriesScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GlassSurface style={styles.header} intensity={26}>
         <View>
           <Text style={[styles.title, { fontSize: titleSize }]}>Memories</Text>
           <Text style={[styles.subtitle, { fontSize: subtitleSize }]}>
@@ -346,14 +347,14 @@ export const MemoriesScreen: React.FC = () => {
           disabled={isGenerating}
         >
           {isGenerating ? (
-            <ActivityIndicator size="small" color={Colors.white} />
+            <ActivityIndicator size="small" color={Colors.textPrimary} />
           ) : (
             <Text style={[styles.generateButtonText, { fontSize: countSize }]}>
               Generate Now
             </Text>
           )}
         </TouchableOpacity>
-      </View>
+      </GlassSurface>
       
       <ScrollView 
         style={styles.scrollView}
@@ -377,7 +378,7 @@ export const MemoriesScreen: React.FC = () => {
         ) : (
           // Daily Summaries
           dailySummaries.map((summary, index) => (
-            <View key={index} style={styles.summaryCard}>
+            <GlassSurface key={index} style={styles.summaryCard} intensity={24}>
               <View style={styles.summaryHeader}>
                 <Text style={[styles.summaryDate, { fontSize: dateSize }]}>
                   {formatDate(summary.date)}
@@ -412,20 +413,20 @@ export const MemoriesScreen: React.FC = () => {
               
               {/* Data Quality Warning */}
               {summary.warnings && summary.warnings.length > 0 && (
-                <View style={styles.warningContainer}>
+                <GlassSurface style={styles.warningContainer} intensity={20}>
                   <Text style={[styles.warningIcon, { fontSize: summarySize }]}>⚠️</Text>
                   <Text style={[styles.warningText, { fontSize: countSize }]}>
                     {summary.warnings.join('. ')}
                   </Text>
-                </View>
+                </GlassSurface>
               )}
               
               {summary.dataQuality === 'minimal' || summary.dataQuality === 'limited' ? (
-                <View style={styles.qualityBadge}>
+                <GlassSurface style={styles.qualityBadge} intensity={20}>
                   <Text style={[styles.qualityText, { fontSize: countSize }]}>
                     Limited data available
                   </Text>
-                </View>
+                </GlassSurface>
               ) : null}
               
               {summary.highlights.length > 0 && (
@@ -446,7 +447,7 @@ export const MemoriesScreen: React.FC = () => {
                   ))}
                 </View>
               )}
-            </View>
+            </GlassSurface>
           ))
         )}
         
@@ -465,7 +466,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.extraLarge + 20,
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.lg,
-    backgroundColor: Colors.cardLight,
+    backgroundColor: Colors.cardDark,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
     flexDirection: 'row',
@@ -474,7 +475,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: '800',
-    color: Colors.text,
+    color: Colors.textPrimary,
   },
   subtitle: {
     color: Colors.textSecondary,
@@ -485,13 +486,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.medium,
+    borderRadius: BorderRadius.extraLarge,
     minWidth: 80,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
     ...Shadows.small,
   },
   generateButtonText: {
-    color: Colors.white,
+    color: Colors.textPrimary,
     fontWeight: '700',
   },
   scrollView: {
@@ -511,7 +514,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textPrimary,
     marginBottom: Spacing.sm,
     textAlign: 'center',
   },
@@ -527,8 +530,8 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   summaryCard: {
-    backgroundColor: Colors.cardLight,
-    borderRadius: BorderRadius.large,
+    backgroundColor: 'rgba(52, 55, 60, 0.75)',
+    borderRadius: BorderRadius.extraLarge,
     padding: Spacing.lg,
     marginBottom: Spacing.md,
     borderWidth: 1,
@@ -548,14 +551,16 @@ const styles = StyleSheet.create({
   },
   summaryDate: {
     fontWeight: '700',
-    color: Colors.text,
+    color: Colors.textPrimary,
     flex: 1,
   },
   countBadge: {
-    backgroundColor: Colors.primary + '20',
+    backgroundColor: Colors.cardDark,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
-    borderRadius: BorderRadius.small,
+    borderRadius: BorderRadius.large,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   deleteSummaryButton: {
     width: 28,
@@ -573,7 +578,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   countText: {
-    color: Colors.primary,
+    color: Colors.charcoalDark,
     fontWeight: '600',
   },
   summaryText: {
@@ -585,47 +590,42 @@ const styles = StyleSheet.create({
   },
   descriptionText: {
     color: Colors.textSecondary,
-    fontSize: 14,
     lineHeight: 20,
     marginTop: Spacing.xs,
     marginBottom: Spacing.md,
     opacity: 0.85,
   },
-  descriptionText: {
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: Spacing.md,
-    opacity: 0.9,
-  },
   warningContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 193, 7, 0.1)',
-    borderRadius: BorderRadius.medium,
+    backgroundColor: Colors.cardDark,
+    borderRadius: BorderRadius.large,
     padding: Spacing.sm,
     marginBottom: Spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255, 193, 7, 0.3)',
+    borderColor: Colors.border,
   },
   warningIcon: {
     marginRight: Spacing.xs,
-    color: '#FFC107',
+    color: Colors.charcoalDark,
   },
   warningText: {
     flex: 1,
-    color: '#FFC107',
+    color: Colors.charcoalDark,
     lineHeight: 16,
   },
   qualityBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 193, 7, 0.15)',
-    borderRadius: BorderRadius.small,
+    backgroundColor: Colors.cardDark,
+    borderRadius: BorderRadius.large,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     marginTop: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   qualityText: {
-    color: '#FFC107',
+    color: Colors.charcoalDark,
     fontWeight: '500',
   },
   highlightsContainer: {
@@ -647,14 +647,13 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     marginTop: 6,
     marginRight: Spacing.sm,
   },
   highlightText: {
     flex: 1,
-    color: Colors.text,
+    color: Colors.textPrimary,
     lineHeight: 20,
   },
 });
-

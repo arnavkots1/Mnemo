@@ -9,6 +9,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { analyzeMemoryWithGemini } from '../services/geminiMemoryService';
+import { transcribeAudio } from '../services/audioTranscriptionService';
 
 const router = express.Router();
 
@@ -75,13 +76,24 @@ router.post(
       }
 
       // Add audio file if provided (Gemini can process audio directly)
+      let transcribedText: string | null = null;
       if (files?.audio && files.audio[0]) {
         input.audioPath = files.audio[0].path;
         console.log('[Memory Analysis] 🎤 Audio file:', files.audio[0].path);
+        
+        // Transcribe audio for better accuracy
+        console.log('[Memory Analysis] 🎙️ Transcribing audio...');
+        transcribedText = await transcribeAudio(files.audio[0].path);
+        if (transcribedText) {
+          input.audioTranscript = transcribedText;
+          console.log('[Memory Analysis] ✅ Audio transcribed successfully');
+        } else {
+          console.log('[Memory Analysis] ⚠️ Audio transcription failed, continuing without transcript');
+        }
       }
 
-      // Add audio transcript if provided (from frontend emotion analysis)
-      if (audioTranscript) {
+      // Add audio transcript if provided (from frontend emotion analysis or transcription)
+      if (audioTranscript && !transcribedText) {
         input.audioTranscript = audioTranscript;
       }
       if (audioEmotion) {
@@ -145,10 +157,11 @@ router.post(
         });
       }
 
-      // Return Gemini analysis
+      // Return Gemini analysis with transcript if available
       res.json({
         ...result,
         usedGemini: true,
+        audioTranscript: transcribedText || audioTranscript || undefined,
       });
     } catch (error) {
       console.error('[Memory Analysis] Error:', error);

@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
+import { Colors, BorderRadius, Spacing } from '../constants/NewDesignColors';
+import { GlassSurface } from './GlassSurface';
 
 export type DataQuality = 'excellent' | 'good' | 'limited' | 'minimal';
 
@@ -22,14 +23,14 @@ export const DataQualityWarning: React.FC<Props> = ({ quality, warnings, dataSou
     return null;
   }
 
-  const getQualityColor = () => {
+  const getQualityTone = () => {
     switch (quality) {
       case 'limited':
-        return '#FFA500'; // Orange
+        return Colors.primaryLight;
       case 'minimal':
-        return '#FFD700'; // Gold/Yellow
+        return Colors.warning;
       default:
-        return Colors.textMuted;
+        return Colors.secondary;
     }
   };
 
@@ -55,19 +56,20 @@ export const DataQualityWarning: React.FC<Props> = ({ quality, warnings, dataSou
     }
   };
 
-  const color = getQualityColor();
+  const tone = getQualityTone();
+  const textColor = Colors.textPrimary;
 
   return (
-    <View style={[styles.container, { backgroundColor: `${color}20`, borderColor: `${color}60` }, style]}>
+    <GlassSurface style={[styles.container, style]} intensity={22}>
       <View style={styles.header}>
-        <Text style={styles.icon}>{getQualityIcon()}</Text>
-        <Text style={[styles.title, { color }]}>{getQualityLabel()}</Text>
+        <Text style={[styles.icon, { color: tone }]}>{getQualityIcon()}</Text>
+        <Text style={[styles.title, { color: textColor }]}>{getQualityLabel()}</Text>
       </View>
       
       {warnings.length > 0 && (
         <View style={styles.warningsContainer}>
           {warnings.map((warning, index) => (
-            <Text key={index} style={[styles.warningText, { color }]}>
+            <Text key={index} style={[styles.warningText, { color: textColor }]}>
               • {warning}
             </Text>
           ))}
@@ -78,15 +80,15 @@ export const DataQualityWarning: React.FC<Props> = ({ quality, warnings, dataSou
         <Text style={styles.sourcesLabel}>Data used:</Text>
         <View style={styles.sourceTags}>
           {dataSources.map((source, index) => (
-            <View key={index} style={[styles.sourceTag, { backgroundColor: `${color}30` }]}>
-              <Text style={[styles.sourceTagText, { color }]}>
+            <View key={index} style={[styles.sourceTag, { backgroundColor: 'rgba(52, 55, 60, 0.8)', borderColor: Colors.border }]}>
+              <Text style={[styles.sourceTagText, { color: textColor }]}>
                 {source.replace(/-/g, ' ')}
               </Text>
             </View>
           ))}
         </View>
       </View>
-    </View>
+    </GlassSurface>
   );
 };
 
@@ -94,7 +96,6 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: BorderRadius.medium,
     padding: Spacing.md,
-    borderWidth: 1,
     marginVertical: Spacing.sm,
   },
   header: {
@@ -137,6 +138,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     borderRadius: BorderRadius.small,
+    borderWidth: 1,
   },
   sourceTagText: {
     fontSize: 11,

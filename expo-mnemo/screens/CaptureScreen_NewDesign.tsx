@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSettingsContext } from '../store/SettingsContext';
 import { CaptureStackParamList } from '../navigation/CaptureStackNavigator';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
+import { GlassSurface } from '../components/GlassSurface';
 
 type CaptureScreenNavigationProp = NativeStackNavigationProp<CaptureStackParamList, 'Capture'>;
 
@@ -30,7 +31,9 @@ export const CaptureScreen: React.FC = () => {
   const isTinyScreen = dimensions.width < 350;
   const heroTitleSize = isTinyScreen ? 36 : isSmallScreen ? 42 : 48;
   const heroSubSize = isTinyScreen ? 14 : isSmallScreen ? 15 : 16;
-  const cardTitleSize = isTinyScreen ? 18 : isSmallScreen ? 20 : 22;
+  const visionTitleSize = isTinyScreen ? 22 : isSmallScreen ? 24 : 26;
+  const visionSubtitleSize = isTinyScreen ? 12 : isSmallScreen ? 13 : 14;
+  const cardTitleSize = isTinyScreen ? 16 : isSmallScreen ? 18 : 20;
   const cardDescSize = isTinyScreen ? 12 : isSmallScreen ? 13 : 14;
   const badgeTextSize = isTinyScreen ? 9 : 10;
   
@@ -76,8 +79,8 @@ export const CaptureScreen: React.FC = () => {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.greeting}>Hello,</Text>
-        <Text style={styles.name}>Welcome Back</Text>
+        <Text style={[styles.greeting, { fontSize: heroSubSize }]}>Hello,</Text>
+        <Text style={[styles.name, { fontSize: heroTitleSize }]}>Welcome Back</Text>
       </View>
 
       {/* Quick Actions - Pill Tabs */}
@@ -94,18 +97,18 @@ export const CaptureScreen: React.FC = () => {
       </View>
 
       {/* Vision Feature Card - Dark */}
-      <View style={styles.visionCard}>
+      <GlassSurface style={styles.visionCard} intensity={36}>
         <View style={styles.visionHeader}>
           <View>
             <View style={styles.featureBadge}>
-              <Text style={styles.featureBadgeText}>NEW</Text>
+              <Text style={[styles.featureBadgeText, { fontSize: badgeTextSize }]}>NEW</Text>
             </View>
-            <Text style={styles.visionTitle}>Mnemo Vision</Text>
-            <Text style={styles.visionSubtitle}>AI-Powered Memory Creation</Text>
+            <Text style={[styles.visionTitle, { fontSize: visionTitleSize }]}>Mnemo Vision</Text>
+            <Text style={[styles.visionSubtitle, { fontSize: visionSubtitleSize }]}>AI-Powered Memory Creation</Text>
           </View>
         </View>
 
-        <Text style={styles.visionDescription}>
+        <Text style={[styles.visionDescription, { fontSize: cardDescSize }]}>
           Combine photos, voice notes, and location. Our AI creates rich, meaningful 
           memories with intelligent insights.
         </Text>
@@ -131,17 +134,17 @@ export const CaptureScreen: React.FC = () => {
         >
           <Text style={styles.visionButtonText}>Try Mnemo Vision</Text>
         </TouchableOpacity>
-      </View>
+      </GlassSurface>
 
       {/* Action Cards Grid */}
       <View style={styles.grid}>
         {/* Voice Recording Card */}
-        <View style={styles.actionCard}>
+        <GlassSurface style={styles.actionCard} intensity={28}>
           <View style={styles.cardIconBadge}>
             <Text style={styles.cardIcon}>🎙️</Text>
           </View>
-          <Text style={styles.cardTitle}>Voice{'\n'}Moments</Text>
-          <Text style={styles.cardDescription}>
+          <Text style={[styles.cardTitle, { fontSize: cardTitleSize }]}>Voice{'\n'}Moments</Text>
+          <Text style={[styles.cardDescription, { fontSize: cardDescSize }]}>
             Record your thoughts
           </Text>
           <TouchableOpacity 
@@ -150,15 +153,15 @@ export const CaptureScreen: React.FC = () => {
           >
             <Text style={styles.cardButtonText}>Start</Text>
           </TouchableOpacity>
-        </View>
+        </GlassSurface>
 
         {/* Photo Memories Card */}
-        <View style={styles.actionCard}>
+        <GlassSurface style={styles.actionCard} intensity={28}>
           <View style={styles.cardIconBadge}>
             <Text style={styles.cardIcon}>📸</Text>
           </View>
-          <Text style={styles.cardTitle}>Photo{'\n'}Memories</Text>
-          <Text style={styles.cardDescription}>
+          <Text style={[styles.cardTitle, { fontSize: cardTitleSize }]}>Photo{'\n'}Memories</Text>
+          <Text style={[styles.cardDescription, { fontSize: cardDescSize }]}>
             Import & organize
           </Text>
           <TouchableOpacity 
@@ -167,15 +170,15 @@ export const CaptureScreen: React.FC = () => {
           >
             <Text style={styles.cardTagText}>In Moments →</Text>
           </TouchableOpacity>
-        </View>
+        </GlassSurface>
 
         {/* Location Tracking Card */}
-        <View style={styles.actionCard}>
+        <GlassSurface style={styles.actionCard} intensity={28}>
           <View style={styles.cardIconBadge}>
             <Text style={styles.cardIcon}>📍</Text>
           </View>
-          <Text style={styles.cardTitle}>Places{'\n'}Visited</Text>
-          <Text style={styles.cardDescription}>
+          <Text style={[styles.cardTitle, { fontSize: cardTitleSize }]}>Places{'\n'}Visited</Text>
+          <Text style={[styles.cardDescription, { fontSize: cardDescSize }]}>
             Track your journey
           </Text>
           <TouchableOpacity 
@@ -184,11 +187,11 @@ export const CaptureScreen: React.FC = () => {
           >
             <Text style={styles.cardTagText}>In Settings</Text>
           </TouchableOpacity>
-        </View>
+        </GlassSurface>
 
         {/* Today Summary Card - Wide */}
-        <View style={[styles.actionCard, styles.wideCard]}>
-          <Text style={styles.summaryTitle}>Today's Summary</Text>
+        <GlassSurface style={[styles.actionCard, styles.wideCard]} intensity={28}>
+          <Text style={[styles.summaryTitle, { fontSize: cardTitleSize }]}>Today's Summary</Text>
           <View style={styles.summaryStats}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>0</Text>
@@ -205,16 +208,16 @@ export const CaptureScreen: React.FC = () => {
               <Text style={styles.statLabel}>Places</Text>
             </View>
           </View>
-        </View>
+        </GlassSurface>
       </View>
 
       {/* Privacy Info */}
-      <View style={styles.infoCard}>
+      <GlassSurface style={styles.infoCard} intensity={24}>
         <Text style={styles.infoTitle}>Private by design</Text>
         <Text style={styles.infoText}>
           Everything stays on your device. No cloud sync unless you choose it.
         </Text>
-      </View>
+      </GlassSurface>
 
       <View style={{ height: 40 }} />
     </ScrollView>
@@ -233,7 +236,7 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: Colors.textSecondary,
+    color: Colors.textMuted,
     fontWeight: '500',
   },
   name: {
@@ -251,12 +254,14 @@ const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.large,
-    backgroundColor: Colors.cardLight,
+    borderRadius: BorderRadius.extraLarge,
+    backgroundColor: 'rgba(52, 55, 60, 0.65)',
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
     ...Shadows.small,
   },
   pillActive: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.cardLight,
   },
   pillText: {
     fontSize: 14,
@@ -272,8 +277,7 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.lg,
     padding: Spacing.lg,
-    backgroundColor: Colors.cardDark,
-    borderRadius: BorderRadius.large,
+    borderRadius: BorderRadius.extraLarge,
     ...Shadows.medium,
   },
   visionHeader: {
@@ -284,7 +288,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
-    borderRadius: BorderRadius.small,
+    borderRadius: BorderRadius.large,
     marginBottom: Spacing.sm,
   },
   featureBadgeText: {
@@ -300,12 +304,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   visionSubtitle: {
-    fontSize: 13,
     fontWeight: '600',
     color: Colors.textMuted,
   },
   visionDescription: {
-    fontSize: 14,
     color: Colors.textLight,
     lineHeight: 22,
     marginBottom: Spacing.md,
@@ -334,7 +336,7 @@ const styles = StyleSheet.create({
   visionButton: {
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.medium,
+    borderRadius: BorderRadius.extraLarge,
     alignItems: 'center',
     ...Shadows.small,
   },
@@ -351,8 +353,7 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     width: '47%',
-    backgroundColor: Colors.cardLight,
-    borderRadius: BorderRadius.large,
+    borderRadius: BorderRadius.extraLarge,
     padding: Spacing.md,
     ...Shadows.small,
   },
@@ -362,8 +363,10 @@ const styles = StyleSheet.create({
   cardIconBadge: {
     width: 48,
     height: 48,
-    borderRadius: BorderRadius.medium,
-    backgroundColor: Colors.secondary,
+    borderRadius: BorderRadius.large,
+    backgroundColor: Colors.cardDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
@@ -372,21 +375,19 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   cardTitle: {
-    fontSize: 18,
     fontWeight: '700',
     color: Colors.textPrimary,
     marginBottom: Spacing.xs,
     lineHeight: 24,
   },
   cardDescription: {
-    fontSize: 13,
     color: Colors.textSecondary,
     marginBottom: Spacing.md,
   },
   cardButton: {
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.small,
+    borderRadius: BorderRadius.extraLarge,
     alignItems: 'center',
   },
   cardButtonText: {
@@ -395,20 +396,21 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   cardTag: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.cardDark,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
-    borderRadius: BorderRadius.small,
+    borderRadius: BorderRadius.extraLarge,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   cardTagText: {
     fontSize: 12,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: Colors.textSecondary,
     opacity: 0.9,
   },
   summaryTitle: {
-    fontSize: 18,
     fontWeight: '700',
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
@@ -442,8 +444,10 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.md,
     marginTop: Spacing.lg,
     padding: Spacing.md,
-    backgroundColor: Colors.secondary,
-    borderRadius: BorderRadius.medium,
+    backgroundColor: Colors.cardDark,
+    borderRadius: BorderRadius.extraLarge,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   infoTitle: {
     fontSize: 15,
@@ -453,7 +457,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: Colors.textPrimary,
+    color: Colors.textSecondary,
     lineHeight: 20,
     opacity: 0.9,
   },

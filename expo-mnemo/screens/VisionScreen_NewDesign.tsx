@@ -24,6 +24,7 @@ import { createRichMemory, MemoryData } from '../services/memoryAnalyzer';
 import { useMemoryContext } from '../store/MemoryContext';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
 import { DataQualityWarning } from '../components/DataQualityWarning';
+import { GlassSurface } from '../components/GlassSurface';
 
 export const VisionScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -218,8 +219,8 @@ export const VisionScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Mnemo Vision</Text>
-        <Text style={styles.subtitle}>AI-powered memory creation</Text>
+        <Text style={[styles.title, { fontSize: titleSize }]}>Mnemo Vision</Text>
+        <Text style={[styles.subtitle, { fontSize: descSize }]}>AI-powered memory creation</Text>
       </View>
 
       <ScrollView 
@@ -228,15 +229,15 @@ export const VisionScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Section */}
-        <View style={styles.hero}>
-          <Text style={styles.heroText}>
+        <GlassSurface style={styles.hero} intensity={30}>
+          <Text style={[styles.heroText, { fontSize: descSize + 1 }]}>
             Combine photos, voice, and location. Gemini AI creates beautiful memories with intelligent insights.
           </Text>
-        </View>
+        </GlassSurface>
 
         {/* Empty State Warning */}
         {!hasData && (
-          <View style={styles.emptyWarning}>
+          <GlassSurface style={styles.emptyWarning} intensity={24}>
             <Text style={styles.emptyWarningIcon}>⚠️</Text>
             <View style={{ flex: 1 }}>
               <Text style={[styles.emptyWarningTitle, { fontSize: cardTitleSize }]}>
@@ -246,7 +247,7 @@ export const VisionScreen: React.FC = () => {
                 Add at least one input below to generate a memory
               </Text>
             </View>
-          </View>
+          </GlassSurface>
         )}
 
         {/* Last Generated Memory Quality */}
@@ -262,14 +263,14 @@ export const VisionScreen: React.FC = () => {
         {/* Input Cards */}
         <View style={styles.cardsContainer}>
           {/* Photo Card */}
-          <View style={styles.inputCard}>
+          <GlassSurface style={styles.inputCard} intensity={26}>
             <View style={styles.cardHeader}>
               <View style={styles.iconBadge}>
                 <Text style={styles.iconText}>📸</Text>
               </View>
               <View>
-                <Text style={styles.cardTitle}>Photo</Text>
-                <Text style={styles.cardDescription}>Add a photo for visual context</Text>
+                <Text style={[styles.cardTitle, { fontSize: cardTitleSize }]}>Photo</Text>
+                <Text style={[styles.cardDescription, { fontSize: descSize }]}>Add a photo for visual context</Text>
               </View>
             </View>
             
@@ -285,31 +286,31 @@ export const VisionScreen: React.FC = () => {
               </View>
             ) : (
               <TouchableOpacity style={styles.addButton} onPress={handleSelectPhoto}>
-                <Text style={styles.addButtonText}>Select Photo</Text>
+                <Text style={[styles.addButtonText, { fontSize: buttonSize }]}>Select Photo</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </GlassSurface>
 
           {/* Audio Card */}
-          <View style={styles.inputCard}>
+          <GlassSurface style={styles.inputCard} intensity={26}>
             <View style={styles.cardHeader}>
               <View style={styles.iconBadge}>
                 <Text style={styles.iconText}>🎙️</Text>
               </View>
               <View>
-                <Text style={styles.cardTitle}>Voice Note</Text>
-                <Text style={styles.cardDescription}>Record your thoughts</Text>
+                <Text style={[styles.cardTitle, { fontSize: cardTitleSize }]}>Voice Note</Text>
+                <Text style={[styles.cardDescription, { fontSize: descSize }]}>Record your thoughts</Text>
               </View>
             </View>
             
             {audioUri ? (
               <View style={styles.audioPreview}>
-                <Text style={styles.audioPreviewText}>Recording saved ✓</Text>
+                <Text style={[styles.audioPreviewText, { fontSize: descSize }]}>Recording saved ✓</Text>
                 <TouchableOpacity 
                   style={styles.removeButton}
                   onPress={() => setAudioUri(null)}
                 >
-                  <Text style={styles.removeButtonText}>Remove</Text>
+                  <Text style={[styles.removeButtonText, { fontSize: buttonSize - 2 }]}>Remove</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -317,51 +318,51 @@ export const VisionScreen: React.FC = () => {
                 style={[styles.addButton, isRecording && styles.recordingButton]}
                 onPress={isRecording ? handleStopRecording : handleStartRecording}
               >
-                <Text style={[styles.addButtonText, isRecording && styles.recordingButtonText]}>
+                <Text style={[styles.addButtonText, { fontSize: buttonSize }, isRecording && styles.recordingButtonText]}>
                   {isRecording ? '⏹ Stop Recording' : '⏺ Start Recording'}
                 </Text>
               </TouchableOpacity>
             )}
-          </View>
+          </GlassSurface>
 
           {/* Location Card */}
-          <View style={styles.inputCard}>
+          <GlassSurface style={styles.inputCard} intensity={26}>
             <View style={styles.cardHeader}>
               <View style={styles.iconBadge}>
                 <Text style={styles.iconText}>📍</Text>
               </View>
               <View>
-                <Text style={styles.cardTitle}>Location</Text>
-                <Text style={styles.cardDescription}>Where are you?</Text>
+                <Text style={[styles.cardTitle, { fontSize: cardTitleSize }]}>Location</Text>
+                <Text style={[styles.cardDescription, { fontSize: descSize }]}>Where are you?</Text>
               </View>
             </View>
             
             {location ? (
               <View style={styles.locationPreview}>
-                <Text style={styles.locationText}>{location.placeName}</Text>
+                <Text style={[styles.locationText, { fontSize: descSize }]}>{location.placeName}</Text>
                 <TouchableOpacity 
                   style={styles.removeButton}
                   onPress={() => setLocation(null)}
                 >
-                  <Text style={styles.removeButtonText}>Remove</Text>
+                  <Text style={[styles.removeButtonText, { fontSize: buttonSize - 2 }]}>Remove</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity style={styles.addButton} onPress={handleGetLocation}>
-                <Text style={styles.addButtonText}>Get Location</Text>
+                <Text style={[styles.addButtonText, { fontSize: buttonSize }]}>Get Location</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </GlassSurface>
 
           {/* Note Card */}
-          <View style={styles.inputCard}>
+          <GlassSurface style={styles.inputCard} intensity={26}>
             <View style={styles.cardHeader}>
               <View style={styles.iconBadge}>
                 <Text style={styles.iconText}>✏️</Text>
               </View>
               <View>
-                <Text style={styles.cardTitle}>Your Note</Text>
-                <Text style={styles.cardDescription}>Add your own caption</Text>
+                <Text style={[styles.cardTitle, { fontSize: cardTitleSize }]}>Your Note</Text>
+                <Text style={[styles.cardDescription, { fontSize: descSize }]}>Add your own caption</Text>
               </View>
             </View>
             
@@ -375,7 +376,7 @@ export const VisionScreen: React.FC = () => {
               maxLength={200}
             />
             <Text style={styles.charCount}>{userNote.length}/200</Text>
-          </View>
+          </GlassSurface>
         </View>
 
         {/* Action Buttons */}
@@ -385,7 +386,7 @@ export const VisionScreen: React.FC = () => {
               style={styles.clearButton}
               onPress={handleClear}
             >
-              <Text style={styles.clearButtonText}>Clear All</Text>
+              <Text style={[styles.clearButtonText, { fontSize: buttonSize }]}>Clear All</Text>
             </TouchableOpacity>
           )}
 
@@ -397,19 +398,19 @@ export const VisionScreen: React.FC = () => {
             {isGenerating ? (
               <ActivityIndicator color={Colors.textPrimary} />
             ) : (
-              <Text style={styles.generateButtonText}>Generate Memory</Text>
+              <Text style={[styles.generateButtonText, { fontSize: buttonSize + 1 }]}>Generate Memory</Text>
             )}
           </TouchableOpacity>
         </View>
 
         {/* Info Section */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>How it works</Text>
-          <Text style={styles.infoText}>
+        <GlassSurface style={styles.infoSection} intensity={24}>
+          <Text style={[styles.infoTitle, { fontSize: cardTitleSize }]}>How it works</Text>
+          <Text style={[styles.infoText, { fontSize: descSize + 1 }]}>
             Our AI analyzes your inputs and generates a rich memory with intelligent summaries, 
             descriptions, and tags. The more data you provide, the better the result.
           </Text>
-        </View>
+        </GlassSurface>
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -437,13 +438,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.cardDark,
   },
   title: {
-    fontSize: 32,
     fontWeight: '800',
     color: Colors.textLight,
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
     color: Colors.textMuted,
     marginTop: 4,
     fontWeight: '600',
@@ -456,14 +455,15 @@ const styles = StyleSheet.create({
   },
   hero: {
     padding: Spacing.md,
-    backgroundColor: Colors.cardDark,
+    backgroundColor: 'rgba(52, 55, 60, 0.65)',
     marginHorizontal: Spacing.md,
     marginTop: Spacing.lg,
-    borderRadius: BorderRadius.large,
+    borderRadius: BorderRadius.extraLarge,
+    borderWidth: 1,
+    borderColor: Colors.border,
     ...Shadows.small,
   },
   heroText: {
-    fontSize: 15,
     color: Colors.textLight,
     lineHeight: 24,
     textAlign: 'center',
@@ -473,9 +473,11 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   inputCard: {
-    backgroundColor: Colors.cardLight,
     padding: Spacing.lg,
-    borderRadius: BorderRadius.large,
+    backgroundColor: 'rgba(52, 55, 60, 0.75)',
+    borderRadius: BorderRadius.extraLarge,
+    borderWidth: 1,
+    borderColor: Colors.border,
     ...Shadows.small,
   },
   cardHeader: {
@@ -487,8 +489,10 @@ const styles = StyleSheet.create({
   iconBadge: {
     width: 44,
     height: 44,
-    borderRadius: BorderRadius.medium,
-    backgroundColor: Colors.secondary,
+    borderRadius: BorderRadius.large,
+    backgroundColor: Colors.cardDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -496,33 +500,32 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   cardTitle: {
-    fontSize: 17,
     fontWeight: '700',
     color: Colors.textPrimary,
   },
   cardDescription: {
-    fontSize: 13,
     color: Colors.textSecondary,
     marginTop: 2,
   },
   addButton: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.cardDark,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.medium,
+    borderRadius: BorderRadius.extraLarge,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
     ...Shadows.small,
   },
   recordingButton: {
-    backgroundColor: Colors.error,
+    backgroundColor: Colors.primary,
   },
   addButtonText: {
     color: Colors.textPrimary,
-    fontSize: 15,
     fontWeight: '700',
   },
   recordingButtonText: {
-    color: Colors.textLight,
+    color: Colors.textPrimary,
   },
   previewContainer: {
     gap: Spacing.sm,
@@ -530,15 +533,19 @@ const styles = StyleSheet.create({
   photoPreview: {
     width: '100%',
     height: 200,
-    borderRadius: BorderRadius.medium,
-    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.large,
+    backgroundColor: Colors.cardDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   audioPreview: {
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.cardDark,
     padding: Spacing.md,
-    borderRadius: BorderRadius.medium,
+    borderRadius: BorderRadius.large,
     alignItems: 'center',
     gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   audioPreviewText: {
     color: Colors.textPrimary,
@@ -546,10 +553,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   locationPreview: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.cardDark,
     padding: Spacing.md,
-    borderRadius: BorderRadius.medium,
+    borderRadius: BorderRadius.large,
     gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   locationText: {
     color: Colors.textPrimary,
@@ -558,27 +567,25 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   removeButton: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.backgroundLight,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.small,
+    borderRadius: BorderRadius.extraLarge,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
   },
   removeButtonText: {
     color: Colors.textSecondary,
-    fontSize: 13,
     fontWeight: '700',
   },
   textInput: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.cardDark,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: BorderRadius.medium,
+    borderRadius: BorderRadius.large,
     padding: Spacing.md,
     color: Colors.textPrimary,
-    fontSize: 15,
     minHeight: 100,
     textAlignVertical: 'top',
   },
@@ -593,24 +600,23 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   clearButton: {
-    backgroundColor: Colors.cardLight,
+    backgroundColor: Colors.cardDark,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.medium,
+    borderRadius: BorderRadius.extraLarge,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
   },
   clearButtonText: {
     color: Colors.textSecondary,
-    fontSize: 15,
     fontWeight: '700',
   },
   generateButton: {
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.medium,
+    borderRadius: BorderRadius.extraLarge,
     alignItems: 'center',
     ...Shadows.medium,
   },
@@ -619,7 +625,6 @@ const styles = StyleSheet.create({
   },
   generateButtonText: {
     color: Colors.textPrimary,
-    fontSize: 17,
     fontWeight: '700',
     letterSpacing: 0.3,
   },
@@ -627,17 +632,17 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     marginHorizontal: Spacing.md,
     marginTop: Spacing.lg,
-    backgroundColor: Colors.secondary,
-    borderRadius: BorderRadius.medium,
+    backgroundColor: 'rgba(52, 55, 60, 0.7)',
+    borderRadius: BorderRadius.extraLarge,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   infoTitle: {
-    fontSize: 16,
     fontWeight: '700',
     color: Colors.textPrimary,
     marginBottom: Spacing.xs,
   },
   infoText: {
-    fontSize: 14,
     color: Colors.textPrimary,
     lineHeight: 22,
     opacity: 0.9,
@@ -645,13 +650,13 @@ const styles = StyleSheet.create({
   emptyWarning: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF3CD',
-    borderRadius: BorderRadius.medium,
+    backgroundColor: Colors.cardDark,
+    borderRadius: BorderRadius.extraLarge,
     padding: Spacing.md,
     marginHorizontal: Spacing.md,
     marginTop: Spacing.md,
     borderWidth: 1,
-    borderColor: '#FFE69C',
+    borderColor: Colors.border,
   },
   emptyWarningIcon: {
     fontSize: 32,
@@ -659,11 +664,11 @@ const styles = StyleSheet.create({
   },
   emptyWarningTitle: {
     fontWeight: '700',
-    color: '#856404',
+    color: Colors.textPrimary,
     marginBottom: 2,
   },
   emptyWarningText: {
-    color: '#856404',
+    color: Colors.textPrimary,
     lineHeight: 16,
   },
 });

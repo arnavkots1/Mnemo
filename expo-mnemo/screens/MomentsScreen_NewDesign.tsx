@@ -14,6 +14,7 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
@@ -24,6 +25,7 @@ import { pickPhotosAndCreateMemories } from '../services/photoService';
 import { getAudioUri } from '../services/audioStorageService';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
+import { GlassSurface } from '../components/GlassSurface';
 
 type FilterType = 'all' | MemoryKind | 'audio' | 'context_log'; // Support legacy filter names
 
@@ -35,6 +37,14 @@ export const MomentsScreen: React.FC = () => {
   const soundRef = useRef<Audio.Sound | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ placeName: string; latitude: number; longitude: number } | null>(null);
   const [locationPermissionGranted, setLocationPermissionGranted] = useState<boolean | null>(null);
+  const dimensions = useWindowDimensions();
+  const isCompact = dimensions.width < 360;
+  const headerTitleSize = isCompact ? 22 : 28;
+  const headerSubtitleSize = isCompact ? 12 : 14;
+  const buttonTextSize = isCompact ? 12 : 14;
+  const emptyTitleSize = isCompact ? 18 : 22;
+  const emptyTextSize = isCompact ? 13 : 15;
+  const dateHeaderSize = isCompact ? 14 : 16;
   
   useFocusEffect(
     useCallback(() => {
@@ -339,7 +349,7 @@ export const MomentsScreen: React.FC = () => {
     });
 
     return (
-      <View key={moment.id} style={styles.memoryCard}>
+      <GlassSurface key={moment.id} style={styles.memoryCard} intensity={26}>
         {/* Memory Type Icon */}
         <View style={styles.memoryIconBadge}>
           <Text style={styles.memoryIcon}>
@@ -412,6 +422,14 @@ export const MomentsScreen: React.FC = () => {
             </TouchableOpacity>
           )}
 
+          {/* Transcript */}
+          {moment.details?.transcript && (
+            <View style={styles.transcriptContainer}>
+              <Text style={styles.transcriptLabel}>Transcript:</Text>
+              <Text style={styles.transcriptText}>{moment.details.transcript}</Text>
+            </View>
+          )}
+
           {/* Location */}
           {moment.details?.locationName && (
             <View style={styles.locationBadge}>
@@ -430,22 +448,22 @@ export const MomentsScreen: React.FC = () => {
             </View>
           )}
         </View>
-      </View>
+      </GlassSurface>
     );
   };
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GlassSurface style={[styles.header, isCompact && styles.headerStacked]} intensity={28}>
         <View>
-          <Text style={styles.headerTitle}>Your Moments</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={[styles.headerTitle, { fontSize: headerTitleSize }]}>Your Moments</Text>
+          <Text style={[styles.headerSubtitle, { fontSize: headerSubtitleSize }]}>
             {filteredMemories.length} {filteredMemories.length === 1 ? 'moment' : 'moments'}
             {filter !== 'all' && ` (${memories.length} total)`}
           </Text>
         </View>
-        <View style={styles.headerActions}>
+        <View style={[styles.headerActions, isCompact && styles.headerActionsStacked]}>
           <TouchableOpacity 
             style={styles.refreshButton}
             onPress={handleRefresh}
@@ -456,10 +474,10 @@ export const MomentsScreen: React.FC = () => {
             style={styles.importButton}
             onPress={handleImportPhotos}
           >
-            <Text style={styles.importButtonText}>Import Photos</Text>
+            <Text style={[styles.importButtonText, { fontSize: buttonTextSize }]}>Import Photos</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </GlassSurface>
 
       {/* Filters */}
       <ScrollView 
@@ -535,27 +553,27 @@ export const MomentsScreen: React.FC = () => {
                 </View>
                 {locationPermissionGranted === true && currentLocation ? (
                   <>
-                    <Text style={styles.emptyTitle}>Location Tracking Active</Text>
-                    <Text style={styles.emptyText}>
-                      Currently at: {currentLocation.placeName}
-                    </Text>
-                    <Text style={styles.emptySubtext}>
-                      Places will appear here when you move to a new location (500m+ away)
-                    </Text>
+                <Text style={[styles.emptyTitle, { fontSize: emptyTitleSize }]}>Location Tracking Active</Text>
+                <Text style={[styles.emptyText, { fontSize: emptyTextSize }]}>
+                  Currently at: {currentLocation.placeName}
+                </Text>
+                <Text style={styles.emptySubtext}>
+                  Places will appear here when you move to a new location (500m+ away)
+                </Text>
                   </>
                 ) : locationPermissionGranted === false ? (
                   <>
-                    <Text style={styles.emptyTitle}>Location Permission Needed</Text>
-                    <Text style={styles.emptyText}>
-                      Enable location access in Settings to track places automatically
-                    </Text>
+                <Text style={[styles.emptyTitle, { fontSize: emptyTitleSize }]}>Location Permission Needed</Text>
+                <Text style={[styles.emptyText, { fontSize: emptyTextSize }]}>
+                  Enable location access in Settings to track places automatically
+                </Text>
                   </>
                 ) : (
                   <>
-                    <Text style={styles.emptyTitle}>Checking Location...</Text>
-                    <Text style={styles.emptyText}>
-                      Please wait while we check your location permissions
-                    </Text>
+                <Text style={[styles.emptyTitle, { fontSize: emptyTitleSize }]}>Checking Location...</Text>
+                <Text style={[styles.emptyText, { fontSize: emptyTextSize }]}>
+                  Please wait while we check your location permissions
+                </Text>
                   </>
                 )}
               </>
@@ -564,20 +582,20 @@ export const MomentsScreen: React.FC = () => {
                 <View style={styles.emptyIcon}>
                   <Text style={styles.emptyIconText}>🎤</Text>
                 </View>
-                <Text style={styles.emptyTitle}>No voice moments yet</Text>
-                <Text style={styles.emptyText}>
-                  Record voice notes from the Home screen to capture audio moments
-                </Text>
+              <Text style={[styles.emptyTitle, { fontSize: emptyTitleSize }]}>No voice moments yet</Text>
+              <Text style={[styles.emptyText, { fontSize: emptyTextSize }]}>
+                Record voice notes from the Home screen to capture audio moments
+              </Text>
               </>
             ) : filter === 'photo' ? (
               <>
                 <View style={styles.emptyIcon}>
                   <Text style={styles.emptyIconText}>📸</Text>
                 </View>
-                <Text style={styles.emptyTitle}>No photos yet</Text>
-                <Text style={styles.emptyText}>
-                  Import photos to create visual memories
-                </Text>
+              <Text style={[styles.emptyTitle, { fontSize: emptyTitleSize }]}>No photos yet</Text>
+              <Text style={[styles.emptyText, { fontSize: emptyTextSize }]}>
+                Import photos to create visual memories
+              </Text>
                 <TouchableOpacity 
                   style={styles.emptyButton}
                   onPress={handleImportPhotos}
@@ -590,10 +608,10 @@ export const MomentsScreen: React.FC = () => {
                 <View style={styles.emptyIcon}>
                   <Text style={styles.emptyIconText}>📸</Text>
                 </View>
-                <Text style={styles.emptyTitle}>No moments yet</Text>
-                <Text style={styles.emptyText}>
-                  Start capturing memories by importing photos or recording voice notes
-                </Text>
+              <Text style={[styles.emptyTitle, { fontSize: emptyTitleSize }]}>No moments yet</Text>
+              <Text style={[styles.emptyText, { fontSize: emptyTextSize }]}>
+                Start capturing memories by importing photos or recording voice notes
+              </Text>
                 <TouchableOpacity 
                   style={styles.emptyButton}
                   onPress={handleImportPhotos}
@@ -616,7 +634,7 @@ export const MomentsScreen: React.FC = () => {
                 console.log(`🎨 [MOMENTS] Rendering day group "${date}" with ${dayMoments.length} moment${dayMoments.length === 1 ? '' : 's'}`);
                 return (
                   <View key={date} style={styles.dayGroup}>
-                    <Text style={styles.dateHeader}>{date}</Text>
+                    <Text style={[styles.dateHeader, { fontSize: dateHeaderSize }]}>{date}</Text>
                     {dayMoments.map((moment) => {
                       console.log(`   🎨 [MOMENTS] Rendering moment: ${moment.id} - "${moment.summary}"`);
                       return renderMemoryCard(moment);
@@ -646,18 +664,23 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: Spacing.md,
     paddingHorizontal: Spacing.lg,
-    backgroundColor: Colors.cardLight,
+    backgroundColor: Colors.cardDark,
     borderBottomLeftRadius: BorderRadius.large,
     borderBottomRightRadius: BorderRadius.large,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
     ...Shadows.small,
   },
+  headerStacked: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+  },
   headerTitle: {
-    fontSize: 28,
     fontWeight: '800',
     color: Colors.textPrimary,
   },
   headerSubtitle: {
-    fontSize: 14,
     color: Colors.textSecondary,
     marginTop: 4,
     fontWeight: '600',
@@ -665,12 +688,18 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     gap: Spacing.sm,
+    flexWrap: 'wrap',
+  },
+  headerActionsStacked: {
+    width: '100%',
   },
   refreshButton: {
     width: 40,
     height: 40,
-    borderRadius: BorderRadius.small,
-    backgroundColor: Colors.secondary,
+    borderRadius: BorderRadius.large,
+    backgroundColor: Colors.cardLight,
+    borderWidth: 1,
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -680,13 +709,14 @@ const styles = StyleSheet.create({
   importButton: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.small,
+    borderRadius: BorderRadius.extraLarge,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
     ...Shadows.small,
   },
   importButtonText: {
-    fontSize: 14,
     fontWeight: '700',
     color: Colors.textPrimary,
   },
@@ -701,18 +731,18 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   filterPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: Colors.cardLight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.extraLarge,
+    backgroundColor: Colors.cardDark,
     borderWidth: 1,
     borderColor: Colors.border,
-    height: 28,
+    minHeight: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
   filterPillActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.cardLight,
     borderColor: Colors.primary,
   },
   filterText: {
@@ -721,7 +751,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   filterTextActive: {
-    color: Colors.white,
+    color: Colors.textPrimary,
     fontWeight: '700',
   },
   scrollView: {
@@ -729,7 +759,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.md,
-    paddingTop: 0,
+    paddingTop: Spacing.sm,
     paddingBottom: Spacing.lg,
     flexGrow: 1,
   },
@@ -754,10 +784,12 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: BorderRadius.large,
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.cardLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   emptyIconText: {
     fontSize: 40,
@@ -786,8 +818,10 @@ const styles = StyleSheet.create({
   emptyButton: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.medium,
+    borderRadius: BorderRadius.extraLarge,
     backgroundColor: Colors.primary,
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
     ...Shadows.medium,
   },
   emptyButtonText: {
@@ -807,18 +841,22 @@ const styles = StyleSheet.create({
   },
   memoryCard: {
     flexDirection: 'row',
-    backgroundColor: Colors.cardLight,
-    borderRadius: BorderRadius.large,
+    backgroundColor: 'rgba(52, 55, 60, 0.75)',
+    borderRadius: BorderRadius.extraLarge,
     padding: Spacing.md,
     marginBottom: Spacing.md,
     minHeight: 80, // Ensure minimum height for visibility
+    borderWidth: 1,
+    borderColor: Colors.border,
     ...Shadows.small,
   },
   memoryIconBadge: {
     width: 44,
     height: 44,
-    borderRadius: BorderRadius.medium,
-    backgroundColor: Colors.secondary,
+    borderRadius: BorderRadius.large,
+    backgroundColor: Colors.cardDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,
@@ -851,10 +889,12 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   timeBadge: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.cardDark,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
-    borderRadius: BorderRadius.small,
+    borderRadius: BorderRadius.large,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   deleteButton: {
     width: 28,
@@ -885,17 +925,21 @@ const styles = StyleSheet.create({
   memoryImage: {
     width: '100%',
     height: 200,
-    borderRadius: BorderRadius.medium,
+    borderRadius: BorderRadius.large,
     marginTop: Spacing.sm,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.cardDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   audioPlayer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background,
-    borderRadius: BorderRadius.medium,
+    backgroundColor: Colors.cardDark,
+    borderRadius: BorderRadius.large,
     padding: Spacing.sm,
     marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   audioIcon: {
     width: 40,
@@ -924,11 +968,13 @@ const styles = StyleSheet.create({
   },
   locationBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.cardDark,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
-    borderRadius: BorderRadius.small,
+    borderRadius: BorderRadius.large,
     marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   locationText: {
     fontSize: 12,
@@ -942,15 +988,38 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   tag: {
-    backgroundColor: Colors.secondary,
+    backgroundColor: Colors.cardDark,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
-    borderRadius: BorderRadius.small,
+    borderRadius: BorderRadius.large,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   tagText: {
     fontSize: 11,
     fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  transcriptContainer: {
+    marginTop: Spacing.sm,
+    padding: Spacing.sm,
+    backgroundColor: Colors.cardDark,
+    borderRadius: BorderRadius.large,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  transcriptLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  transcriptText: {
+    fontSize: 13,
     color: Colors.textPrimary,
+    lineHeight: 18,
   },
 });
 

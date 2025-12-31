@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Colors, Spacing, BorderRadius } from '../constants/NewDesignColors';
+import { GlassSurface } from '../components/GlassSurface';
 
 type LegalDocument = 'privacy' | 'terms';
 
@@ -200,12 +201,12 @@ export const LegalScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <GlassSurface style={styles.header} intensity={26}>
         <Text style={[styles.title, { fontSize: titleSize }]}>Legal</Text>
-      </View>
+      </GlassSurface>
 
       {/* Document Selector */}
-      <View style={styles.selectorContainer}>
+      <GlassSurface style={styles.selectorContainer} intensity={24}>
         <TouchableOpacity
           style={[
             styles.selectorButton,
@@ -240,7 +241,7 @@ export const LegalScreen: React.FC = () => {
             Terms of Service
           </Text>
         </TouchableOpacity>
-      </View>
+      </GlassSurface>
 
       {/* Content */}
       {activeDoc === 'privacy' ? <PrivacyPolicy /> : <TermsOfService />}
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.extraLarge + 20,
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.lg,
-    backgroundColor: Colors.cardLight,
+    backgroundColor: Colors.cardDark,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
@@ -270,7 +271,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     gap: Spacing.sm,
-    backgroundColor: Colors.cardLight,
+    backgroundColor: Colors.cardDark,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
@@ -278,8 +279,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.medium,
-    backgroundColor: Colors.background,
+    borderRadius: BorderRadius.extraLarge,
+    backgroundColor: Colors.cardLight,
+    borderWidth: 1,
+    borderColor: Colors.border,
     alignItems: 'center',
   },
   selectorButtonActive: {
@@ -290,11 +293,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   selectorTextActive: {
-    color: Colors.white,
+    color: Colors.textPrimary,
   },
   content: {
     flex: 1,
     padding: Spacing.lg,
+    backgroundColor: Colors.background,
   },
   heading: {
     color: Colors.textPrimary,
