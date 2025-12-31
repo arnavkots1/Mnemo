@@ -19,22 +19,8 @@ async function listAvailableModels() {
   try {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     
-    // List all available models
-    const models = await genAI.listModels();
-    
-    console.log('✅ Available Gemini Models:');
-    console.log('========================');
-    
-    models.forEach((model: any) => {
-      console.log(`- ${model.name}`);
-      if (model.displayName) {
-        console.log(`  Display Name: ${model.displayName}`);
-      }
-      if (model.supportedGenerationMethods) {
-        console.log(`  Supported Methods: ${model.supportedGenerationMethods.join(', ')}`);
-      }
-      console.log('');
-    });
+    // Note: listModels() is not available in the current SDK version
+    // We'll just test common model names instead
     
     // Try common model names
     console.log('\n🔍 Testing Common Model Names:');

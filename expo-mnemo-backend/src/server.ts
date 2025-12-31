@@ -13,6 +13,7 @@ import express from 'express';
 import cors from 'cors';
 import { emotionRouter } from './routes/emotion';
 import { imageRouter } from './routes/image';
+import locationRouter from './routes/location';
 import { initializeModel } from './services/modelLoader';
 
 const app = express();
@@ -47,6 +48,7 @@ import dailySummariesRouter from './routes/dailySummaries';
 // Routes
 app.use('/api', emotionRouter);
 app.use('/api', imageRouter);
+app.use('/api/location', locationRouter); // Google Places location lookup
 app.use('/api/memory', memoryAnalysisRouter); // Comprehensive memory analysis
 app.use('/api/memory', dailySummariesRouter); // Daily summaries
 

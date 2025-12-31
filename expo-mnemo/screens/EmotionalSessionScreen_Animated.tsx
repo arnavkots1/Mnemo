@@ -310,10 +310,13 @@ export const EmotionalSessionScreen: React.FC = () => {
       
       cleanup();
       
-      console.log('Recording stopped');
+      console.log('🛑 [Emotional Session] Recording stopped');
+      console.log(`   Recording URI: ${recordingUri}`);
+      console.log(`   Duration: ${status.durationMillis}ms`);
       
       // Save final recording to Moments
       if (recordingUri && status.durationMillis && status.durationMillis > 0) {
+        console.log('💾 [Emotional Session] Saving recording to Moments...');
         const durationSec = status.durationMillis / 1000;
         const averageLevel = status.metering !== undefined ? (status.metering + 160) / 160 : 0.5;
         
@@ -369,6 +372,7 @@ export const EmotionalSessionScreen: React.FC = () => {
             };
             
             console.log(`✅ [Emotional Session] Gemini analysis complete: "${memory.summary}"`);
+            console.log(`   Description: ${memory.details?.description?.substring(0, 80)}...`);
           } catch (error) {
             console.warn(`⚠️ [Emotional Session] Gemini analysis failed, using fallback:`, error);
             // Fallback to basic summary
@@ -393,6 +397,7 @@ export const EmotionalSessionScreen: React.FC = () => {
             console.error('Error saving audio file:', error);
           }
           
+          console.log(`➕ Adding memory to context...`);
           await addMemory(memory);
           console.log(`✅ Voice memory saved to Moments: ${emotion}`);
         } catch (error) {
@@ -420,12 +425,19 @@ export const EmotionalSessionScreen: React.FC = () => {
   };
   
   const handleEndSession = async () => {
+    console.log('🎙️ [Emotional Session] End Session button pressed');
     Alert.alert('End Session', 'Save this voice moment to your Moments?', [
-      { text: 'Cancel', style: 'cancel' },
+      { 
+        text: 'Cancel', 
+        style: 'cancel',
+        onPress: () => console.log('❌ User cancelled save')
+      },
       {
         text: 'Save & Exit',
         onPress: async () => {
+          console.log('✅ User confirmed save - stopping recording...');
           await stopRecording();
+          console.log('📱 Navigating back to Capture screen');
           // Go back to Home (not Moments)
           navigation.navigate('Capture');
         },

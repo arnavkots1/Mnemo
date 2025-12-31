@@ -98,7 +98,7 @@ async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | nu
       // Photo added
     }
     
-    // Add audio file if available
+    // Add audio file if available - backend will transcribe it
     if (data.audioUri) {
       const filename = data.audioUri.split('/').pop() || 'audio.m4a';
       const fileType = filename.endsWith('.m4a') ? 'audio/m4a' : 
@@ -110,7 +110,7 @@ async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | nu
         type: fileType,
         name: filename,
       } as any);
-      // Audio added
+      console.log('🎤 [Memory Analyzer] Audio file added - backend will transcribe and analyze');
     }
     
     // Add location
@@ -167,7 +167,9 @@ async function analyzeWithGemini(data: MemoryData): Promise<GeneratedMemory | nu
       
       // If backend is unavailable (503, 502, 504), fall back gracefully
       if (response.status === 503 || response.status === 502 || response.status === 504) {
-        console.warn(`⚠️ [Memory Analyzer] Backend unavailable (${response.status}), using local analysis`);
+        console.warn(`⚠️ [Memory Analyzer] Backend unavailable (${response.status})`);
+        console.warn(`   → Audio transcription NOT available (requires backend)`);
+        console.warn(`   → Using local fallback (basic analysis only)`);
         return null; // Will trigger fallback
       }
       

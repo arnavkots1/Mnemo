@@ -19,6 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@googlemaps/google-maps-services-js": "^3.4.2",
     "@types/multer": "^2.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",

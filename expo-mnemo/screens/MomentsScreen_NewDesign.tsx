@@ -436,21 +436,27 @@ export const MomentsScreen: React.FC = () => {
             </TouchableOpacity>
           )}
 
-          {/* Transcript - only show when expanded */}
-          {isExpanded && moment.details?.transcript && (
+          {/* Transcript - always show if available, with expansion for full text */}
+          {moment.details?.transcript && (
             <View style={styles.transcriptContainer}>
-              <Text style={styles.transcriptLabel}>Transcript:</Text>
-              <Text style={styles.transcriptText}>{moment.details.transcript}</Text>
+              <Text style={styles.transcriptLabel}>🎙️ Transcript:</Text>
+              <Text style={styles.transcriptText} numberOfLines={isExpanded ? undefined : 2}>
+                {moment.details.transcript}
+              </Text>
             </View>
           )}
 
-          {/* Location - show when expanded */}
-          {isExpanded && (moment.placeName || moment.details?.locationName || (moment.latitude && moment.longitude)) && (
+          {/* Location - always show for context moments, with expansion for details */}
+          {(moment.kind === 'context' || moment.placeName || moment.details?.locationName || (moment.latitude && moment.longitude)) && (
             <View style={styles.locationBadge}>
               <Text style={styles.locationText}>
-                📍 {moment.placeName || moment.details?.locationName || 
-                    `${moment.latitude?.toFixed(6)}°N, ${moment.longitude?.toFixed(6)}°E`}
+                📍 {moment.placeName || moment.details?.locationName || 'Location'}
               </Text>
+              {isExpanded && moment.latitude && moment.longitude && (
+                <Text style={[styles.locationText, { fontSize: 10, marginTop: 4, opacity: 0.8 }]}>
+                  Coordinates: {moment.latitude.toFixed(6)}°N, {moment.longitude.toFixed(6)}°E
+                </Text>
+              )}
             </View>
           )}
 

@@ -10,6 +10,7 @@ import * as TaskManager from 'expo-task-manager';
 import { Accelerometer } from 'expo-sensors';
 import { MemoryEntry, createMemoryEntry } from '../types/MemoryEntry';
 import { generateContextMemorySummary, enhanceMemoryWithContext } from './memoryGenerator';
+import { getRichLocationName } from './googlePlacesService';
 
 const BACKGROUND_LOCATION_TASK = 'BACKGROUND_LOCATION_TASK';
 const SIGNIFICANT_DISTANCE_THRESHOLD = 500; // meters - only log when moved 500m in a different direction
@@ -18,8 +19,8 @@ const MOTION_THRESHOLD = 5.0; // Very high threshold - only detect significant m
 const MOTION_CHECK_INTERVAL = 5 * 60 * 1000; // Check motion every 5 minutes (less frequent)
 const LOCATION_ACCURACY = Location.Accuracy.BestForNavigation; // Highest accuracy - GPS, WiFi, cell towers
 
-// Store last known location to detect significant movement
-let lastKnownLocation: { latitude: number; longitude: number } | null = null;
+// Store last known location and time to enforce both distance AND time criteria
+let lastKnownLocation: { latitude: number; longitude: number; timestamp: number } | null = null;
 let memoryCallback: ((memory: MemoryEntry) => void) | null = null;
 let foregroundPollTimer: NodeJS.Timeout | null = null;
 let motionSubscription: any = null;
@@ -52,7 +53,9 @@ function calculateDistance(
 }
 
 /**
- * Process a location update and create memory entry if significant movement detected
+ * Process a location update and create memory entry ONLY if BOTH conditions met:
+ * 1. At least 10 minutes since last location memory
+ * 2. Moved at least 500 meters from last known location
  */
 async function processLocationUpdate(
   latitude: number,
@@ -63,7 +66,9 @@ async function processLocationUpdate(
     return;
   }
   
-  // Check if this is significant movement (500m+ in a different direction)
+  const now = timestamp.getTime();
+  
+  // Check BOTH distance AND time criteria
   if (lastKnownLocation) {
     const distance = calculateDistance(
       lastKnownLocation.latitude,
@@ -72,65 +77,91 @@ async function processLocationUpdate(
       longitude
     );
     
-    // Only create memory if moved more than 500m threshold
-    // This ensures we only log when user has moved to a significantly different location
-    if (distance < SIGNIFICANT_DISTANCE_THRESHOLD) {
-      console.log(`📍 Location update skipped - only moved ${distance.toFixed(0)}m (threshold: ${SIGNIFICANT_DISTANCE_THRESHOLD}m)`);
+    const timeSinceLastUpdate = now - lastKnownLocation.timestamp;
+    const minutesSinceLastUpdate = Math.floor(timeSinceLastUpdate / (1000 * 60));
+    
+    // BOTH conditions must be true:
+    // 1. At least 10 minutes passed
+    // 2. Moved at least 500 meters
+    const hasMovedEnough = distance >= SIGNIFICANT_DISTANCE_THRESHOLD;
+    const hasEnoughTimePassed = minutesSinceLastUpdate >= 10;
+    
+    if (!hasMovedEnough || !hasEnoughTimePassed) {
+      console.log(`📍 Location update skipped:`);
+      console.log(`   Distance moved: ${distance.toFixed(0)}m ${hasMovedEnough ? '✅' : '❌'} (need 500m+)`);
+      console.log(`   Time passed: ${minutesSinceLastUpdate} min ${hasEnoughTimePassed ? '✅' : '❌'} (need 10min+)`);
       return;
     }
     
-    console.log(`📍 Significant location change detected - moved ${distance.toFixed(0)}m, creating location memory`);
+    console.log(`📍 Location memory will be created:`);
+    console.log(`   ✅ Moved ${distance.toFixed(0)}m (>${SIGNIFICANT_DISTANCE_THRESHOLD}m)`);
+    console.log(`   ✅ ${minutesSinceLastUpdate} minutes passed (>10min)`);
+  } else {
+    console.log(`📍 First location check - creating initial location memory`);
   }
   
-  // Update last known location
-  lastKnownLocation = { latitude, longitude };
+  // Update last known location with timestamp
+  lastKnownLocation = { latitude, longitude, timestamp: now };
   
-  // Try to get precise place name via reverse geocoding
+  // Try to get rich location name from Google Places API first
   let placeName: string | undefined;
+  
+  console.log(`🔍 Looking up location details...`);
+  
   try {
-    const results = await Location.reverseGeocodeAsync({
-      latitude,
-      longitude,
-    });
+    // Try Google Places API via backend (if configured)
+    const richLocationName = await getRichLocationName(latitude, longitude);
     
-    if (results.length > 0) {
-      const result = results[0];
-      const parts: string[] = [];
+    if (richLocationName) {
+      placeName = richLocationName;
+      console.log(`✅ [Google Places] Rich location: ${placeName}`);
+    } else {
+      console.log(`⚠️ [Google Places] Not available - falling back to basic geocoding`);
       
-      // Build most precise location string possible
-      // Priority: street number + street > name > district > subregion > city > region
-      if (result.streetNumber && result.street) {
-        parts.push(`${result.streetNumber} ${result.street}`);
-      } else if (result.street) {
-        parts.push(result.street);
-      } else if (result.name) {
-        parts.push(result.name);
+      // Fallback to basic reverse geocoding (Expo's built-in)
+      const results = await Location.reverseGeocodeAsync({ latitude, longitude });
+      if (results && results.length > 0) {
+        const result = results[0];
+        const parts: string[] = [];
+        const usedParts = new Set<string>();
+        
+        // Build basic location string from available data
+        if (result.name && result.name !== result.district && result.name !== result.city) {
+          parts.push(result.name);
+          usedParts.add(result.name.toLowerCase());
+        }
+        
+        if (result.street && !usedParts.has(result.street.toLowerCase())) {
+          const street = result.streetNumber ? `${result.streetNumber} ${result.street}` : result.street;
+          parts.push(street);
+          usedParts.add(street.toLowerCase());
+        }
+        
+        if (result.district && !usedParts.has(result.district.toLowerCase())) {
+          parts.push(result.district);
+          usedParts.add(result.district.toLowerCase());
+        }
+        
+        if (result.city && !usedParts.has(result.city.toLowerCase())) {
+          parts.push(result.city);
+          usedParts.add(result.city.toLowerCase());
+        }
+        
+        if (result.region && !usedParts.has(result.region.toLowerCase()) && result.region !== result.city) {
+          parts.push(result.region);
+          usedParts.add(result.region.toLowerCase());
+        }
+        
+        placeName = parts.length > 0 ? parts.join(', ') : undefined;
+        console.log(`📍 [Basic Geocoding] Location: ${placeName}`);
       }
-      
-      // Add district/neighborhood for more precision
-      if (result.district) {
-        parts.push(result.district);
-      } else if (result.subregion && result.subregion !== result.city) {
-        parts.push(result.subregion);
-      }
-      
-      // Add city
-      if (result.city) {
-        parts.push(result.city);
-      }
-      
-      // Add region/state if available
-      if (result.region && result.region !== result.city) {
-        parts.push(result.region);
-      }
-      
-      placeName = parts.length > 0 ? parts.join(', ') : undefined;
-      
-      console.log(`📍 Precise location: ${placeName} (${latitude.toFixed(6)}, ${longitude.toFixed(6)})`);
     }
   } catch (error) {
-    console.error('Error reverse geocoding:', error);
+    console.error('❌ Error getting location details:', error);
   }
+  
+  console.log(`📍 Final location: ${placeName || 'Unknown'}`);
+  console.log(`   Coordinates: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
   
   // Generate context-aware summary
   const summary = generateContextMemorySummary(placeName, latitude, longitude);
