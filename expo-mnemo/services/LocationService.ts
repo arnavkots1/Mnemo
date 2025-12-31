@@ -12,10 +12,11 @@ import { MemoryEntry, createMemoryEntry } from '../types/MemoryEntry';
 import { generateContextMemorySummary, enhanceMemoryWithContext } from './memoryGenerator';
 
 const BACKGROUND_LOCATION_TASK = 'BACKGROUND_LOCATION_TASK';
-const SIGNIFICANT_DISTANCE_THRESHOLD = 500; // meters - only update when moved 500m
+const SIGNIFICANT_DISTANCE_THRESHOLD = 500; // meters - only log when moved 500m in a different direction
 const FOREGROUND_POLL_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
 const MOTION_THRESHOLD = 2.0; // Much higher threshold to reduce false positives
 const MOTION_CHECK_INTERVAL = 60000; // Check motion every 60 seconds (even less frequent)
+const LOCATION_ACCURACY = Location.Accuracy.High; // High accuracy for precise location logging
 
 // Store last known location to detect significant movement
 let lastKnownLocation: { latitude: number; longitude: number } | null = null;
@@ -62,7 +63,7 @@ async function processLocationUpdate(
     return;
   }
   
-  // Check if this is significant movement
+  // Check if this is significant movement (500m+ in a different direction)
   if (lastKnownLocation) {
     const distance = calculateDistance(
       lastKnownLocation.latitude,
@@ -71,10 +72,14 @@ async function processLocationUpdate(
       longitude
     );
     
-    // Only create memory if moved more than threshold
+    // Only create memory if moved more than 500m threshold
+    // This ensures we only log when user has moved to a significantly different location
     if (distance < SIGNIFICANT_DISTANCE_THRESHOLD) {
+      console.log(`📍 Location update skipped - only moved ${distance.toFixed(0)}m (threshold: ${SIGNIFICANT_DISTANCE_THRESHOLD}m)`);
       return;
     }
+    
+    console.log(`📍 Significant location change detected - moved ${distance.toFixed(0)}m, creating location memory`);
   }
   
   // Update last known location
@@ -339,11 +344,12 @@ export class LocationService {
   
   /**
    * Poll current location (foreground)
+   * Uses high accuracy for precise location logging
    */
   private async pollLocation(): Promise<void> {
     try {
       const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced, // Balance between accuracy and battery
+        accuracy: LOCATION_ACCURACY, // High accuracy for precise location logging
       });
       
       await processLocationUpdate(
@@ -383,9 +389,9 @@ export class LocationService {
       
       // Start background location updates
       await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: LOCATION_ACCURACY, // High accuracy for precise location logging
         timeInterval: 5 * 60 * 1000, // 5 minutes
-        distanceInterval: SIGNIFICANT_DISTANCE_THRESHOLD, // 100 meters
+        distanceInterval: SIGNIFICANT_DISTANCE_THRESHOLD, // 500 meters - only update when moved 500m
         foregroundService: {
           notificationTitle: 'Mnemo Location Tracking',
           notificationBody: 'Tracking your location for context memories',

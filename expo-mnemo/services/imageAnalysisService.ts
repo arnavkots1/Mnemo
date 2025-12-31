@@ -71,9 +71,9 @@ export async function analyzeImage(request: ImageAnalysisRequest): Promise<Image
         dayOfWeek: request.dayOfWeek,
       }));
       
-      // Add timeout for image upload (30 seconds for large images)
+      // Add timeout for image upload (60 seconds for large images, especially through tunnel)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
       
       try {
         const uploadUrl = `${apiConfig.apiUrl}/analyze-image-upload`;
@@ -94,6 +94,14 @@ export async function analyzeImage(request: ImageAnalysisRequest): Promise<Image
         if (!uploadResponse.ok) {
           const errorText = await uploadResponse.text();
           console.error(`❌ Upload failed: ${uploadResponse.status} - ${errorText}`);
+          
+          // If timeout (408) or server error (500+), fall back to local generation
+          if (uploadResponse.status === 408 || uploadResponse.status >= 500) {
+            console.warn(`⚠️ Server timeout/error (${uploadResponse.status}), falling back to local image analysis`);
+            return generateLocalSummary(request);
+          }
+          
+          // For other errors (400, 401, etc.), still throw but will be caught below
           throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`);
         }
         
@@ -103,10 +111,21 @@ export async function analyzeImage(request: ImageAnalysisRequest): Promise<Image
       } catch (error: any) {
         clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
-          console.error('❌ Image upload timed out after 30 seconds');
-          throw new Error('Image upload timed out after 30 seconds');
+          console.error('❌ Image upload timed out after 60 seconds');
+          console.warn('⚠️ Falling back to local image analysis');
+          // Fall back to local generation instead of throwing
+          return generateLocalSummary(request);
         }
-        console.error('❌ Upload error:', error.message || error);
+        
+        // Check if error message indicates timeout or network issue
+        const errorMessage = error.message || String(error);
+        if (errorMessage.includes('408') || errorMessage.includes('timeout') || errorMessage.includes('network')) {
+          console.warn(`⚠️ Network/timeout error detected, falling back to local image analysis: ${errorMessage}`);
+          return generateLocalSummary(request);
+        }
+        
+        console.error('❌ Upload error:', errorMessage);
+        // For other errors, try legacy endpoint or fall back
         throw error;
       }
     } catch (error) {

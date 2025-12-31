@@ -168,8 +168,18 @@ export const MomentsScreen: React.FC = () => {
     
     console.log(`📦 [MOMENTS] Grouping ${filteredMemories.length} filtered moment${filteredMemories.length === 1 ? '' : 's'}...`);
     
+    // Track seen IDs to prevent duplicates
+    const seenIds = new Set<string>();
+    
     filteredMemories.forEach((moment) => {
       try {
+        // Skip if we've already seen this moment (prevent duplicates)
+        if (seenIds.has(moment.id)) {
+          console.warn(`⚠️ [MOMENTS] Duplicate moment detected, skipping: ${moment.id} - "${moment.summary}"`);
+          return;
+        }
+        seenIds.add(moment.id);
+        
         const date = new Date(moment.startTime);
         if (isNaN(date.getTime())) {
           console.error(`❌ [MOMENTS] Invalid date for moment ${moment.id}: ${moment.startTime}`);
@@ -191,6 +201,16 @@ export const MomentsScreen: React.FC = () => {
       }
     });
     
+    // Sort moments within each day group by time (newest first)
+    Object.keys(groups).forEach(dateKey => {
+      groups[dateKey].sort((a, b) => {
+        const timeA = new Date(a.startTime).getTime();
+        const timeB = new Date(b.startTime).getTime();
+        return timeB - timeA; // Descending: newest first
+      });
+    });
+    
+    // Sort day groups by date (newest first)
     const result = Object.entries(groups).sort((a, b) => {
       const dateA = new Date(a[1][0].startTime);
       const dateB = new Date(b[1][0].startTime);
@@ -390,9 +410,12 @@ export const MomentsScreen: React.FC = () => {
           )}
 
           {/* Photo */}
-          {moment.kind === 'photo' && moment.details?.imagePath && (
+          {moment.kind === 'photo' && (moment.details?.uri || moment.details?.photoUri || moment.details?.imagePath) && (
             <Image
-              source={{ uri: moment.details.imagePath, cache: 'force-cache' }}
+              source={{ 
+                uri: moment.details.uri || moment.details.photoUri || moment.details.imagePath, 
+                cache: 'force-cache' 
+              }}
               style={styles.memoryImage}
               resizeMode="cover"
             />

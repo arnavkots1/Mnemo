@@ -361,8 +361,15 @@ export async function pickPhotosAndCreateMemories(): Promise<MemoryEntry[]> {
         description = analysis.description;
         
         console.log(`Image analysis result: ${summary}`);
-      } catch (error) {
-        console.warn('Image analysis failed, using local fallback:', error);
+      } catch (error: any) {
+        const errorMsg = error?.message || String(error);
+        console.warn(`⚠️ Image analysis failed (${errorMsg}), using local fallback`);
+        
+        // Check if it's a timeout or network error - these are expected with slow connections
+        if (errorMsg.includes('408') || errorMsg.includes('timeout') || errorMsg.includes('network') || errorMsg.includes('Upload failed')) {
+          console.log(`ℹ️ Network/timeout issue detected - using local analysis (this is normal with slow connections)`);
+        }
+        
         // Fallback to local generation
         const enhanced = enhanceMemoryWithContext(
           createMemoryEntry('photo', 'Photo moment', {
@@ -372,6 +379,7 @@ export async function pickPhotosAndCreateMemories(): Promise<MemoryEntry[]> {
           })
         );
         summary = enhanced.summary;
+        description = enhanced.details?.description || 'A memorable moment captured';
       }
       
       // Log URI for debugging
