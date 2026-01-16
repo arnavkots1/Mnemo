@@ -210,6 +210,7 @@ export const MemoriesScreen: React.FC = () => {
       
       // Convert backend format to local format (should only be 1 summary)
       const summaries: DailySummary[] = (result.summaries || []).map((s: any) => ({
+        id: s.id || `summary_${s.date.replace(/\s+/g, '_')}`, // Generate ID if missing
         date: s.date,
         count: s.count,
         summary: s.summary,
@@ -339,6 +340,7 @@ export const MemoriesScreen: React.FC = () => {
     }
     
     return {
+      id: `summary_${date.replace(/\s+/g, '_')}`, // Generate unique ID from date
       date,
       count: dayMemories.length,
       summary,
@@ -378,7 +380,7 @@ export const MemoriesScreen: React.FC = () => {
         `Troubleshooting:\n` +
         `1. Backend running? Check terminal\n` +
         `2. Same Wi-Fi network?\n` +
-        `3. IP correct? Expected: 192.168.88.10\n` +
+        `3. IP correct? Expected: 172.16.140.220\n` +
         `4. Firewall allows port 3000?\n` +
         `5. Try: ipconfig to check your IP\n\n` +
         `Using local fallback instead.`,

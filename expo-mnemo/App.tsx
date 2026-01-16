@@ -14,20 +14,23 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { MemoryProvider, useMemoryContext } from './store/MemoryContext';
 import { SettingsProvider, useSettingsContext } from './store/SettingsContext';
+import { AuthProvider, useAuth } from './store/AuthContext';
 import { CaptureStackNavigator } from './navigation/CaptureStackNavigator';
 import { SettingsStackNavigator } from './navigation/SettingsStackNavigator';
 import { MomentsScreen } from './screens/MomentsScreen_NewDesign';
 import { MemoriesScreen } from './screens/MemoriesScreen';
 import { VisionScreen } from './screens/VisionScreen_NewDesign';
+import AuthScreen from './screens/AuthScreen';
 import { locationService } from './services/LocationService';
 import { initializeApiConfig, API_CONFIG } from './config/apiConfig';
 
 const Tab = createBottomTabNavigator();
 
 /**
- * Inner app component that has access to MemoryContext and SettingsContext
+ * Inner app component that has access to MemoryContext, SettingsContext, and AuthContext
  */
 const AppContent: React.FC = () => {
+  const { user } = useAuth();
   const { addMemory } = useMemoryContext();
   const { settings, isLoading: settingsLoading } = useSettingsContext();
   
@@ -45,7 +48,7 @@ const AppContent: React.FC = () => {
       }
     };
     
-    if (!settingsLoading) {
+    if (!settingsLoading && user) {
       initializePassiveLogging();
     }
     
@@ -57,7 +60,12 @@ const AppContent: React.FC = () => {
         // Silently handle cleanup errors
       }
     };
-  }, [addMemory, settings.enablePassiveContextLogging, settingsLoading]);
+  }, [addMemory, settings.enablePassiveContextLogging, settingsLoading, user]);
+  
+  // Show auth screen if not logged in
+  if (!user) {
+    return <AuthScreen />;
+  }
   
   return (
     <NavigationContainer>
@@ -191,11 +199,13 @@ export default function App() {
   };
 
   return (
-    <SettingsProvider>
-      <MemoryProvider>
-        <AppContent />
-      </MemoryProvider>
-    </SettingsProvider>
+    <AuthProvider>
+      <SettingsProvider>
+        <MemoryProvider>
+          <AppContent />
+        </MemoryProvider>
+      </SettingsProvider>
+    </AuthProvider>
   );
 }
 

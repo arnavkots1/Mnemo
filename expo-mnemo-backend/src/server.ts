@@ -78,7 +78,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
       });
     });
   } else {
-    console.log(`🌐 Accessible from network at: http://192.168.1.49:${PORT}`);
+    console.log(`🌐 Accessible from network at: http://172.16.140.220:${PORT}`);
     console.log(`   ⚠️  If this IP is wrong, update apiConfig.ts in expo-mnemo with your actual IP`);
     console.log(`   💡 Find your IP with: ipconfig (Windows) or ifconfig (Mac/Linux)`);
     console.log(`   💡 Or run: npm run dev:tunnel (uses tunnel, no IP needed!)`);

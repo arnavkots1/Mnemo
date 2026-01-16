@@ -21,7 +21,7 @@ import { configureImageAnalysis } from '../services/imageAnalysisService';
 // Find your IP: ipconfig (Windows) or ifconfig (Mac/Linux)
 // Look for "IPv4 Address" - that's what you need
 
-const DEFAULT_IP = '192.168.1.49'; // Fallback IP if tunnel is not used
+const DEFAULT_IP = '172.16.140.158'; // Fallback IP if tunnel is not used
 
 // Priority: 1. EXPO_PUBLIC_API_URL env var, 2. Tunnel URL, 3. Default IP
 const BACKEND_API_URL =

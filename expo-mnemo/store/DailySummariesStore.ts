@@ -10,8 +10,11 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MemoryEntry } from '../types/MemoryEntry';
+import * as FirestoreService from '../services/firestoreService';
+import { getCurrentUser } from '../services/authService';
 
 export interface DailySummary {
+  id: string; // Unique ID for this summary
   date: string; // Date string (toDateString() format)
   count: number; // Number of moments used to generate this summary
   summary: string; // Brief summary (5-12 words)
@@ -31,9 +34,8 @@ let summariesCache: DailySummary[] | null = null;
 let cacheInitialized = false;
 
 /**
- * Load all daily summaries from AsyncStorage (with cache)
- * 
- * TODO: For production, migrate to GCP Storage or Firebase
+ * Load all daily summaries from Firestore (if logged in) or AsyncStorage
+ * Tries Firestore first, then falls back to AsyncStorage
  */
 export async function loadDailySummaries(): Promise<DailySummary[]> {
   // Return cached data if available
@@ -41,6 +43,25 @@ export async function loadDailySummaries(): Promise<DailySummary[]> {
     return summariesCache;
   }
   
+  const user = getCurrentUser();
+  
+  if (user) {
+    // Try loading from Firestore first
+    try {
+      const firestoreMemories = await FirestoreService.getMemories(user.uid);
+      // Filter to only get DailySummary objects (have `highlights` field)
+      summariesCache = firestoreMemories.filter((m: any) => 
+        m.highlights !== undefined
+      ) as unknown as DailySummary[];
+      cacheInitialized = true;
+      console.log(`☁️ [DailySummariesStore] Loaded ${summariesCache.length} daily summar${summariesCache.length === 1 ? 'y' : 'ies'} from Firestore`);
+      return summariesCache;
+    } catch (error) {
+      console.warn(`⚠️ [DailySummariesStore] Firestore load failed, trying AsyncStorage...`, error);
+    }
+  }
+  
+  // Fallback to AsyncStorage
   try {
     const data = await AsyncStorage.getItem(STORAGE_KEY);
     if (!data) {
@@ -51,7 +72,7 @@ export async function loadDailySummaries(): Promise<DailySummary[]> {
     
     summariesCache = JSON.parse(data) as DailySummary[];
     cacheInitialized = true;
-    console.log(`📖 [DailySummariesStore] Loaded ${summariesCache.length} daily summar${summariesCache.length === 1 ? 'y' : 'ies'} from storage`);
+    console.log(`📖 [DailySummariesStore] Loaded ${summariesCache.length} daily summar${summariesCache.length === 1 ? 'y' : 'ies'} from AsyncStorage`);
     return summariesCache;
   } catch (error) {
     console.error('❌ [DailySummariesStore] Error loading daily summaries:', error);
@@ -83,10 +104,27 @@ export async function saveDailySummaries(summaries: DailySummary[]): Promise<voi
 /**
  * Add or update a daily summary
  * If a summary for the same date exists, it will be replaced
- * 
- * TODO: For production, migrate to GCP Storage or Firebase
+ * Saves to Firestore if logged in, AsyncStorage otherwise
  */
 export async function saveDailySummary(summary: DailySummary): Promise<void> {
+  const user = getCurrentUser();
+  
+  // Ensure summary has an ID
+  if (!summary.id) {
+    summary.id = `summary_${summary.date.replace(/\s+/g, '_')}`;
+  }
+  
+  if (user) {
+    // Save to Firestore
+    try {
+      await FirestoreService.saveMemory(user.uid, summary);
+      console.log(`☁️ [DailySummariesStore] Saved summary for ${summary.date} to Firestore`);
+    } catch (error) {
+      console.warn(`⚠️ [DailySummariesStore] Firestore save failed, saving to AsyncStorage only`, error);
+    }
+  }
+  
+  // Also save to AsyncStorage as local cache
   const summaries = await loadDailySummaries();
   
   // Find existing summary for this date

@@ -17,6 +17,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useMemoryContext } from '../store/MemoryContext';
 import { useSettingsContext } from '../store/SettingsContext';
+import { useAuth } from '../store/AuthContext';
 import { locationService } from '../services/LocationService';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
 import { GlassSurface } from '../components/GlassSurface';
@@ -25,6 +26,7 @@ export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
   const { deleteAllMemories, addMemory } = useMemoryContext();
   const { settings, updateSettings, resetToDefaults } = useSettingsContext();
+  const { user, signOut } = useAuth();
   const dimensions = useWindowDimensions();
   
   // Responsive sizing based on screen width
@@ -71,6 +73,29 @@ export const SettingsScreen: React.FC = () => {
     }
   };
   
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out?',
+      'Your data is synced to the cloud. You can sign back in anytime.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'default',
+          onPress: async () => {
+            try {
+              await signOut();
+              Alert.alert('Success', 'You have been signed out.');
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Error', 'Failed to sign out.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleDeleteAllData = () => {
     Alert.alert(
       'Delete Everything?',
@@ -188,6 +213,36 @@ export const SettingsScreen: React.FC = () => {
             </View>
           </GlassSurface>
         </View>
+
+        {/* Account Section */}
+        {user && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize }]}>Account</Text>
+            
+            <GlassSurface style={styles.settingCard} intensity={22}>
+              <View style={styles.settingHeader}>
+                <View style={[styles.settingIconBadge, { width: iconSize + 16, height: iconSize + 16 }]}>
+                  <Text style={{ fontSize: iconSize }}>👤</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.settingLabel, { fontSize: labelSize }]} numberOfLines={1}>
+                    {user.displayName || 'User'}
+                  </Text>
+                  <Text style={[styles.settingDescription, { fontSize: descSize }]} numberOfLines={2}>
+                    {user.email}
+                  </Text>
+                </View>
+              </View>
+            </GlassSurface>
+
+            <TouchableOpacity 
+              style={styles.signOutButton}
+              onPress={handleSignOut}
+            >
+              <Text style={[styles.signOutButtonText, { fontSize: buttonTextSize }]}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Danger Zone */}
         <View style={styles.section}>
@@ -387,6 +442,19 @@ const styles = StyleSheet.create({
   dangerButtonText: {
     color: Colors.textPrimary,
     fontWeight: '700',
+  },
+  signOutButton: {
+    backgroundColor: 'rgba(255, 107, 107, 0.15)',
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.extraLarge,
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.3)',
+  },
+  signOutButtonText: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
   appName: {
     fontWeight: '800',

@@ -23,7 +23,7 @@
     "@types/multer": "^2.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
-    "expo": "~54.0.27",
+    "expo": "~54.0.31",
     "expo-asset": "~12.0.11",
     "expo-av": "~16.0.8",
     "expo-file-system": "~19.0.20",
@@ -33,6 +33,7 @@
     "expo-status-bar": "~3.0.9",
     "expo-task-manager": "~14.0.9",
     "express": "^4.18.2",
+    "firebase": "^12.7.0",
     "multer": "^2.0.2"
   },
   "devDependencies": {

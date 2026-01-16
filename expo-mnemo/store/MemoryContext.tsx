@@ -15,6 +15,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { MemoryEntry } from '../types/MemoryEntry';
 import * as MemoryStoreModule from './MemoryStore';
+import * as FirestoreService from '../services/firestoreService';
+import { getCurrentUser } from '../services/authService';
 
 // Try to use direct function imports, fallback to object if needed
 const loadMemories = MemoryStoreModule.loadMemories || MemoryStoreModule.memoryStore?.loadMemories;
@@ -54,12 +56,31 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   /**
    * Load moments from store on mount
+   * Tries Firestore first (if user is logged in), then fallbacks to AsyncStorage
    */
   useEffect(() => {
     const loadInitialMoments = async () => {
       try {
         setIsLoading(true);
-        const loadedMoments = await loadMemories();
+        const user = getCurrentUser();
+        let loadedMoments: MemoryEntry[] = [];
+
+        if (user) {
+          try {
+            // Try loading from Firestore first
+            console.log('☁️ [MEMORY_CONTEXT] Loading moments from Firestore...');
+            loadedMoments = await FirestoreService.getMoments(user.uid);
+            console.log(`📊 [MEMORY_CONTEXT] Loaded ${loadedMoments.length} moment${loadedMoments.length === 1 ? '' : 's'} from Firestore`);
+          } catch (error) {
+            console.warn('⚠️ [MEMORY_CONTEXT] Firestore load failed, trying AsyncStorage...', error);
+            loadedMoments = await loadMemories();
+          }
+        } else {
+          // Not logged in - use local storage
+          console.log('📱 [MEMORY_CONTEXT] Loading moments from AsyncStorage (not logged in)...');
+          loadedMoments = await loadMemories();
+        }
+
         console.log(`📊 [MEMORY_CONTEXT] Loaded ${loadedMoments.length} moment${loadedMoments.length === 1 ? '' : 's'} on mount`);
         setMemories(loadedMoments);
       } catch (error) {
@@ -76,12 +97,22 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   /**
    * Add a new MOMENT (not a memory summary)
+   * Saves to Firestore if logged in, AsyncStorage otherwise
    */
   const addMemory = useCallback(async (moment: MemoryEntry) => {
     try {
       console.log(`➕ [MEMORY_CONTEXT] Adding moment: ${moment.id} - "${moment.summary}"`);
+      const user = getCurrentUser();
+
+      if (user) {
+        // Save to Firestore
+        await FirestoreService.saveMoment(user.uid, moment);
+        console.log(`✅ [MEMORY_CONTEXT] Moment saved to Firestore`);
+      }
+      
+      // Also save to AsyncStorage as local cache
       await addMemoryToStore(moment);
-      console.log(`✅ [MEMORY_CONTEXT] Moment saved to store`);
+      console.log(`✅ [MEMORY_CONTEXT] Moment saved to local store`);
       
       // Update local state immediately for responsive UI
       setMemories((prev) => {
@@ -89,14 +120,6 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         console.log(`📊 [MEMORY_CONTEXT] State updated: ${updated.length} total moment${updated.length === 1 ? '' : 's'}`);
         return updated;
       });
-      
-      // Small delay to ensure state propagation
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Also refresh from store to ensure consistency
-      const updatedMoments = await loadMemories();
-      setMemories(updatedMoments);
-      console.log(`🔄 [MEMORY_CONTEXT] Verified state: ${updatedMoments.length} total moment${updatedMoments.length === 1 ? '' : 's'}`);
     } catch (error) {
       console.error(`❌ [MEMORY_CONTEXT] Error adding moment ${moment.id}:`, error);
       // Still update local state even if store save fails
@@ -107,15 +130,25 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   /**
    * Update an existing MOMENT
+   * Updates in Firestore if logged in, AsyncStorage otherwise
    */
   const updateMemory = useCallback(async (moment: MemoryEntry) => {
     try {
       console.log(`🔄 [MEMORY_CONTEXT] Updating moment: ${moment.id}`);
+      const user = getCurrentUser();
+
+      if (user) {
+        // Update in Firestore
+        await FirestoreService.saveMoment(user.uid, moment);
+        console.log(`✅ [MEMORY_CONTEXT] Moment updated in Firestore`);
+      }
+      
+      // Also update in AsyncStorage
       await updateMemoryInStore(moment);
-      // Refresh from store to ensure consistency
-      const updatedMoments = await loadMemories();
-      setMemories(updatedMoments);
-      console.log(`✅ [MEMORY_CONTEXT] Moment updated: ${updatedMoments.length} total`);
+      
+      // Update local state
+      setMemories((prev) => prev.map(m => m.id === moment.id ? moment : m));
+      console.log(`✅ [MEMORY_CONTEXT] Moment updated locally`);
     } catch (error) {
       console.error(`❌ [MEMORY_CONTEXT] Error updating moment ${moment.id}:`, error);
       // Update local state even if store update fails
@@ -126,12 +159,21 @@ export const MemoryProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   /**
    * Delete a MOMENT by ID
+   * Deletes from Firestore if logged in, AsyncStorage otherwise
    */
   const deleteMemory = useCallback(async (id: string) => {
     try {
       const momentToDelete = memories.find(m => m.id === id);
       console.log(`🗑️ [MEMORY_CONTEXT] Deleting moment: ${id}${momentToDelete ? ` - "${momentToDelete.summary}"` : ''}`);
+      const user = getCurrentUser();
+
+      if (user) {
+        // Delete from Firestore
+        await FirestoreService.deleteMoment(user.uid, id);
+        console.log(`✅ [MEMORY_CONTEXT] Moment deleted from Firestore`);
+      }
       
+      // Also delete from AsyncStorage
       const updatedMoments = memories.filter(m => m.id !== id);
       await saveMemories(updatedMoments);
       setMemories(updatedMoments);
