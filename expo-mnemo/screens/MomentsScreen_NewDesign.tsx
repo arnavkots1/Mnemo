@@ -35,6 +35,10 @@ export const MomentsScreen: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>('all');
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [expandedMomentId, setExpandedMomentId] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState('');
+  const [importProgress, setImportProgress] = useState(0);
+  const [importTotal, setImportTotal] = useState(0);
   const soundRef = useRef<Audio.Sound | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{ placeName: string; latitude: number; longitude: number } | null>(null);
   const [locationPermissionGranted, setLocationPermissionGranted] = useState<boolean | null>(null);
@@ -220,17 +224,25 @@ export const MomentsScreen: React.FC = () => {
   };
 
   const handleImportPhotos = async () => {
+    if (isImporting) return;
     try {
+      setIsImporting(true);
+      setImportStatus('Analyzing photos...');
+      setImportProgress(0);
+      setImportTotal(0);
       const memories = await pickPhotosAndCreateMemories();
       
       if (memories.length > 0) {
         let successCount = 0;
         console.log(`📝 Importing ${memories.length} photos...`);
+        setImportStatus('Saving photos...');
+        setImportTotal(memories.length);
         
         for (const memory of memories) {
           try {
             await addMemory(memory);
             successCount++;
+            setImportProgress(successCount);
           } catch (error) {
             console.error('❌ Error adding memory:', error);
           }
@@ -248,6 +260,11 @@ export const MomentsScreen: React.FC = () => {
     } catch (error) {
       console.error('Error importing photos:', error);
       Alert.alert('Import Error', 'Failed to import photos. Please try again.');
+    } finally {
+      setIsImporting(false);
+      setImportStatus('');
+      setImportProgress(0);
+      setImportTotal(0);
     }
   };
 
@@ -460,25 +477,27 @@ export const MomentsScreen: React.FC = () => {
             </View>
           )}
 
-          {/* Tags */}
-          {moment.details?.tags && moment.details.tags.length > 0 && (
-            <View style={styles.tagsContainer}>
-              {moment.details.tags.slice(0, 3).map((tag: string, index: number) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+          <View style={styles.memoryFooter}>
+            {/* Tags */}
+            {moment.details?.tags && moment.details.tags.length > 0 && (
+              <View style={styles.tagsContainer}>
+                {moment.details.tags.slice(0, 3).map((tag: string, index: number) => (
+                  <View key={index} style={styles.tag}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
-          {/* Expand/Collapse Indicator */}
-          {(moment.details?.transcript || moment.placeName || moment.latitude) && (
-            <View style={styles.expandIndicator}>
-              <Text style={styles.expandText}>
-                {isExpanded ? '▲ Tap to collapse' : '▼ Tap to expand'}
-              </Text>
-            </View>
-          )}
+            {/* Expand/Collapse Indicator */}
+            {(moment.details?.transcript || moment.placeName || moment.latitude) && (
+              <View style={styles.expandIndicator}>
+                <Text style={styles.expandText}>
+                  {isExpanded ? '▲ Tap to collapse' : '▼ Tap to expand'}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </GlassSurface>
       </TouchableOpacity>
@@ -489,7 +508,7 @@ export const MomentsScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Header */}
       <GlassSurface style={[styles.header, isCompact && styles.headerStacked]} intensity={28}>
-        <View>
+        <View style={styles.headerTextBlock}>
           <Text style={[styles.headerTitle, { fontSize: headerTitleSize }]}>Your Moments</Text>
           <Text style={[styles.headerSubtitle, { fontSize: headerSubtitleSize }]}>
             {filteredMemories.length} {filteredMemories.length === 1 ? 'moment' : 'moments'}
@@ -500,17 +519,35 @@ export const MomentsScreen: React.FC = () => {
           <TouchableOpacity 
             style={styles.refreshButton}
             onPress={handleRefresh}
+            disabled={isImporting}
           >
             <Text style={styles.refreshButtonText}>🔄</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.importButton}
             onPress={handleImportPhotos}
+            disabled={isImporting}
           >
-            <Text style={[styles.importButtonText, { fontSize: buttonTextSize }]}>Import Photos</Text>
+            {isImporting ? (
+              <ActivityIndicator size="small" color={Colors.textPrimary} />
+            ) : (
+              <Text style={[styles.importButtonText, { fontSize: buttonTextSize }]}>Import Photos</Text>
+            )}
           </TouchableOpacity>
         </View>
       </GlassSurface>
+
+      {isImporting && (
+        <View style={styles.importStatusBar}>
+          <ActivityIndicator size="small" color={Colors.primary} />
+          <Text style={styles.importStatusText}>{importStatus || 'Processing...'}</Text>
+          {importTotal > 0 && (
+            <Text style={styles.importStatusCount}>
+              {importProgress}/{importTotal}
+            </Text>
+          )}
+        </View>
+      )}
 
       {/* Filters */}
       <ScrollView 
@@ -685,8 +722,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingTop: 60,
-    paddingBottom: Spacing.md,
+    paddingTop: 64,
+    paddingBottom: Spacing.lg,
     paddingHorizontal: Spacing.lg,
     backgroundColor: Colors.cardDark,
     borderBottomLeftRadius: BorderRadius.large,
@@ -700,6 +737,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: Spacing.sm,
   },
+  headerTextBlock: {
+    flex: 1,
+    paddingRight: Spacing.md,
+    gap: Spacing.xs,
+  },
   headerTitle: {
     fontWeight: '800',
     color: Colors.textPrimary,
@@ -711,8 +753,9 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: 'row',
-    gap: Spacing.sm,
+    gap: Spacing.md,
     flexWrap: 'wrap',
+    alignItems: 'center',
   },
   headerActionsStacked: {
     width: '100%',
@@ -747,6 +790,27 @@ const styles = StyleSheet.create({
   filtersScrollView: {
     marginBottom: 0,
     maxHeight: 50,
+  },
+  importStatusBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.cardDark,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  importStatusText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  importStatusCount: {
+    marginLeft: 'auto',
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
   },
   filtersContainer: {
     paddingHorizontal: Spacing.lg,
@@ -895,7 +959,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
   },
   memoryTitleContainer: {
     flex: 1,
@@ -910,7 +974,7 @@ const styles = StyleSheet.create({
   memoryHeaderActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: Spacing.sm,
   },
   timeBadge: {
     backgroundColor: Colors.cardDark,
@@ -1009,7 +1073,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.xs,
-    marginTop: Spacing.sm,
+    marginTop: 0,
   },
   tag: {
     backgroundColor: Colors.cardDark,
@@ -1047,10 +1111,14 @@ const styles = StyleSheet.create({
   },
   expandIndicator: {
     alignItems: 'center',
-    marginTop: Spacing.sm,
-    paddingTop: Spacing.xs,
+    marginTop: 0,
+    paddingTop: Spacing.sm,
     borderTopWidth: 1,
     borderTopColor: Colors.border + '40', // Semi-transparent
+  },
+  memoryFooter: {
+    marginTop: Spacing.sm,
+    gap: Spacing.sm,
   },
   expandText: {
     fontSize: 11,

@@ -21,6 +21,23 @@ import { DailySummary } from '../store/DailySummariesStore';
 const MOMENTS_COLLECTION = 'moments';
 const MEMORIES_COLLECTION = 'memories';
 
+function stripUndefined<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUndefined(item)) as T;
+  }
+  if (value && typeof value === 'object') {
+    const result: Record<string, unknown> = {};
+    Object.entries(value as Record<string, unknown>).forEach(([key, val]) => {
+      if (val === undefined) {
+        return;
+      }
+      result[key] = stripUndefined(val);
+    });
+    return result as T;
+  }
+  return value;
+}
+
 /**
  * Save a moment to Firestore
  */
@@ -31,12 +48,12 @@ export const saveMoment = async (userId: string, moment: MemoryEntry): Promise<v
 
   try {
     const momentRef = doc(db, MOMENTS_COLLECTION, moment.id);
-    const momentData = {
+    const momentData = stripUndefined({
       ...moment,
       userId,
       createdAt: Timestamp.fromDate(new Date(moment.startTime)),
       updatedAt: Timestamp.now(),
-    };
+    });
 
     await setDoc(momentRef, momentData);
     console.log('✅ Moment saved to Firestore:', moment.id);
@@ -160,11 +177,11 @@ export const saveMemory = async (userId: string, memory: DailySummary): Promise<
 
   try {
     const memoryRef = doc(db, MEMORIES_COLLECTION, memory.id);
-    const memoryData = {
+    const memoryData = stripUndefined({
       ...memory,
       userId,
       updatedAt: Timestamp.now(),
-    };
+    });
 
     await setDoc(memoryRef, memoryData);
     console.log('✅ Memory saved to Firestore:', memory.id);
@@ -184,23 +201,38 @@ export const getMemories = async (userId: string): Promise<DailySummary[]> => {
 
   try {
     const memoriesRef = collection(db, MEMORIES_COLLECTION);
-    const q = query(
-      memoriesRef,
-      where('userId', '==', userId),
-      orderBy('date', 'desc')
-    );
-
-    const querySnapshot = await getDocs(q);
     const memories: DailySummary[] = [];
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      memories.push({
-        ...data,
-        id: doc.id,
-      } as DailySummary);
-    });
+    const runQuery = async (useOrderBy: boolean) => {
+      const q = useOrderBy
+        ? query(memoriesRef, where('userId', '==', userId), orderBy('date', 'desc'))
+        : query(memoriesRef, where('userId', '==', userId));
 
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        memories.push({
+          ...data,
+          id: doc.id,
+        } as DailySummary);
+      });
+    };
+
+    try {
+      await runQuery(true);
+    } catch (error: any) {
+      const message = error?.message || '';
+      if (message.includes('requires an index')) {
+        console.warn('⚠️ [Firestore] Missing index for memories query, falling back to unordered fetch');
+        memories.length = 0;
+        await runQuery(false);
+      } else {
+        throw error;
+      }
+    }
+
+    // Sort locally by date (newest first) to keep consistent behavior
+    memories.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     console.log(`✅ Loaded ${memories.length} memories from Firestore`);
     return memories;
   } catch (error) {

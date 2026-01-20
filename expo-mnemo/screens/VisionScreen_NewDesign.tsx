@@ -21,14 +21,13 @@ import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
 import { createRichMemory, MemoryData } from '../services/memoryAnalyzer';
-import { useMemoryContext } from '../store/MemoryContext';
+import { DailySummary, saveDailySummary } from '../store/DailySummariesStore';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
 import { DataQualityWarning } from '../components/DataQualityWarning';
 import { GlassSurface } from '../components/GlassSurface';
 
 export const VisionScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { addMemory } = useMemoryContext();
   const dimensions = useWindowDimensions();
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [audioUri, setAudioUri] = useState<string | null>(null);
@@ -174,7 +173,19 @@ export const VisionScreen: React.FC = () => {
       );
 
       const fullMemory = { ...memory, id: generateUUID() };
-      await addMemory(fullMemory);
+      const summaryDate = new Date().toDateString();
+      const dailySummary: DailySummary = {
+        id: generateUUID(),
+        date: summaryDate,
+        count: 1,
+        summary: fullMemory.summary,
+        description: fullMemory.details?.description,
+        highlights: [fullMemory.summary],
+        memories: [fullMemory],
+        warnings: fullMemory.details?.warnings || [],
+        dataQuality: fullMemory.details?.dataQuality || 'good',
+      };
+      await saveDailySummary(dailySummary);
 
       // Store for showing data quality info
       setLastGeneratedMemory({
@@ -184,10 +195,10 @@ export const VisionScreen: React.FC = () => {
         dataSources: memory.details?.dataSources || [],
       });
 
-      // Navigate to Moments tab to show the saved memory
+      // Navigate to Memories tab to show the saved summary
       const parentNav = navigation.getParent();
       if (parentNav) {
-        parentNav.navigate('Moments' as never);
+        parentNav.navigate('Memories' as never);
       }
 
       // Reset form after a short delay to allow navigation

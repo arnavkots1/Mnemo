@@ -8,6 +8,8 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as fs from 'fs';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const PRIMARY_MODEL = 'gemini-2.5-flash';
+const FALLBACK_MODELS = ['gemini-2.5-flash-lite', 'gemini-3-flash'];
 
 let genAI: GoogleGenerativeAI | null = null;
 let model: any = null;
@@ -23,13 +25,48 @@ function initializeGemini() {
 
   try {
     genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    model = genAI.getGenerativeModel({ model: PRIMARY_MODEL });
     console.log('[Audio Transcription] ✅ Initialized successfully');
     return true;
   } catch (error) {
     console.error('[Audio Transcription] Failed to initialize:', error);
     return false;
   }
+}
+
+function isRetryableGeminiError(error: any): boolean {
+  const message = String(error?.message || '');
+  const status = error?.status || error?.statusCode || error?.response?.status;
+  return status === 503 || status === 429 || message.includes('503') || message.includes('overloaded');
+}
+
+async function generateWithFallback(promptParts: any[]): Promise<{ result: any; modelName: string }> {
+  if (!genAI && !initializeGemini()) {
+    throw new Error('Gemini not initialized');
+  }
+  const modelNames = [PRIMARY_MODEL, ...FALLBACK_MODELS];
+  let lastError: any;
+
+  for (const modelName of modelNames) {
+    try {
+      const activeModel = modelName === PRIMARY_MODEL && model
+        ? model
+        : genAI!.getGenerativeModel({ model: modelName });
+      if (modelName !== PRIMARY_MODEL) {
+        console.warn(`[Audio Transcription] ⚠️ Falling back to ${modelName}`);
+      }
+      const result = await activeModel.generateContent(promptParts);
+      return { result, modelName };
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableGeminiError(error)) {
+        throw error;
+      }
+      console.warn(`[Audio Transcription] ⚠️ ${modelName} failed, trying next model`);
+    }
+  }
+
+  throw lastError;
 }
 
 /**
@@ -61,8 +98,8 @@ export async function transcribeAudio(audioPath: string): Promise<string | null>
     // Create prompt for transcription
     const prompt = `Please transcribe the audio file to text. Return only the transcribed text, without any additional commentary or formatting. If the audio is unclear or contains no speech, return "Unable to transcribe audio".`;
 
-    // Call Gemini
-    const result = await model.generateContent([
+    // Call Gemini (with fallback models on overload)
+    const { result, modelName } = await generateWithFallback([
       prompt,
       {
         inlineData: {
@@ -74,6 +111,9 @@ export async function transcribeAudio(audioPath: string): Promise<string | null>
 
     const response = result.response;
     const transcript = response.text().trim();
+    if (modelName !== PRIMARY_MODEL) {
+      console.log(`[Audio Transcription] ✅ Used fallback model: ${modelName}`);
+    }
 
     // Validate transcript
     if (!transcript || transcript.toLowerCase().includes('unable to transcribe')) {

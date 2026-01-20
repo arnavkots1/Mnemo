@@ -49,8 +49,7 @@ try {
       app = getApp();
     }
 
-    // Initialize Auth
-    // Note: Firebase automatically handles persistence in React Native/Expo
+    // Initialize Auth (Expo Go uses in-memory persistence)
     auth = getAuth(app);
 
     // Initialize Firestore

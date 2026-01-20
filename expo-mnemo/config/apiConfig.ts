@@ -23,15 +23,24 @@ import { configureImageAnalysis } from '../services/imageAnalysisService';
 
 const DEFAULT_IP = '172.16.140.158'; // Fallback IP if tunnel is not used
 
+function normalizeApiUrl(url: string): string {
+  const trimmed = url.trim().replace(/\/+$/, '');
+  return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
+}
+
 // Priority: 1. EXPO_PUBLIC_API_URL env var, 2. Tunnel URL, 3. Default IP
 const BACKEND_API_URL =
-  process.env.EXPO_PUBLIC_API_URL || 
-  (process.env.EXPO_PUBLIC_TUNNEL_URL ? `${process.env.EXPO_PUBLIC_TUNNEL_URL}/api` : null) ||
+  (process.env.EXPO_PUBLIC_API_URL
+    ? normalizeApiUrl(process.env.EXPO_PUBLIC_API_URL)
+    : null) ||
+  (process.env.EXPO_PUBLIC_TUNNEL_URL
+    ? normalizeApiUrl(process.env.EXPO_PUBLIC_TUNNEL_URL)
+    : null) ||
   `http://${DEFAULT_IP}:3000/api`;
 
 // Export API config for use in services
 export const API_CONFIG = {
-  BASE_URL: BACKEND_API_URL.replace('/api', ''), // Base URL without /api
+  BASE_URL: BACKEND_API_URL.replace(/\/api$/, ''), // Base URL without /api
   API_URL: BACKEND_API_URL, // Full API URL
 };
 
@@ -43,7 +52,10 @@ export function initializeApiConfig(): void {
   console.log('🔧 [API_CONFIG] Configuring API services...');
   console.log(`🌐 [API_CONFIG] BACKEND_API_URL: ${BACKEND_API_URL}`);
   console.log(`🌐 [API_CONFIG] BASE_URL: ${API_CONFIG.BASE_URL}`);
-  console.log(`🌐 [API_CONFIG] EXPO_PUBLIC_API_URL: ${process.env.EXPO_PUBLIC_API_URL || 'not set (using default IP)'}`);
+  if (process.env.EXPO_PUBLIC_API_URL && process.env.EXPO_PUBLIC_API_URL !== process.env.EXPO_PUBLIC_API_URL.trim()) {
+    console.warn('⚠️ [API_CONFIG] EXPO_PUBLIC_API_URL had extra whitespace and was trimmed');
+  }
+  console.log(`🌐 [API_CONFIG] EXPO_PUBLIC_API_URL: ${process.env.EXPO_PUBLIC_API_URL?.trim() || 'not set (using default IP)'}`);
   
   // Configure emotion classifier
   configureEmotionClassifier({

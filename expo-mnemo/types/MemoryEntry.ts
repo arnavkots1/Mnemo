@@ -35,18 +35,32 @@ export function createMemoryEntry(
     details?: Record<string, any>;
   }
 ): MemoryEntry {
-  return {
+  const entry: MemoryEntry = {
     id: generateUUID(),
     kind,
     startTime: (options?.startTime || new Date()).toISOString(),
-    endTime: options?.endTime?.toISOString(),
-    latitude: options?.latitude,
-    longitude: options?.longitude,
-    placeName: options?.placeName,
-    activityType: options?.activityType,
     summary,
     details: options?.details || {},
   };
+  
+  // Only add optional fields if they have values (avoid undefined for Firestore)
+  if (options?.endTime) {
+    entry.endTime = options.endTime.toISOString();
+  }
+  if (options?.latitude !== undefined) {
+    entry.latitude = options.latitude;
+  }
+  if (options?.longitude !== undefined) {
+    entry.longitude = options.longitude;
+  }
+  if (options?.placeName) {
+    entry.placeName = options.placeName;
+  }
+  if (options?.activityType) {
+    entry.activityType = options.activityType;
+  }
+  
+  return entry;
 }
 
 /**

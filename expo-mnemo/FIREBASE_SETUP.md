@@ -16,20 +16,9 @@
 2. **App nickname:** `Mnemo Web`
 3. **Firebase Hosting:** Don't check it
 4. **Click "Register app"**
-5. **Copy the config object** - it looks like this:
+5. **Copy the config object** from Firebase Console
 
-```javascript
-const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "your-app.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-app.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
-};
-```
-
-6. **Save this - you'll add it to `.env` in Step 5**
+6. **Save it - you'll add the values to `.env` in Step 5**
 
 
 // Import the functions you need from the SDKs you need
@@ -41,13 +30,13 @@ import { getAnalytics } from "firebase/analytics";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyCCX8iuYNL1DB7znNjddrRagYjSfWJzLvY",
-  authDomain: "mnemo-97839.firebaseapp.com",
-  projectId: "mnemo-97839",
-  storageBucket: "mnemo-97839.firebasestorage.app",
-  messagingSenderId: "718110020581",
-  appId: "1:718110020581:web:45db9159d5f551b0dd950c",
-  measurementId: "G-WJEXFBSRTZ"
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: "",
+  measurementId: ""
 };
 
 // Initialize Firebase

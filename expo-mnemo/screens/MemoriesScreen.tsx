@@ -5,7 +5,7 @@
  * Fully responsive design
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useMemoryContext } from '../store/MemoryContext';
+import { useFocusEffect } from '@react-navigation/native';
 import { MemoryEntry } from '../types/MemoryEntry';
 import { Colors, Shadows, BorderRadius, Spacing } from '../constants/NewDesignColors';
 import { API_CONFIG, checkBackendHealth } from '../config/apiConfig';
@@ -28,6 +29,8 @@ export const MemoriesScreen: React.FC = () => {
   const { memories: moments } = useMemoryContext(); // NOTE: These are MOMENTS, not memories
   const [dailySummaries, setDailySummaries] = useState<DailySummary[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toDateString());
+  const [isDayDropdownOpen, setIsDayDropdownOpen] = useState(false);
   const dimensions = useWindowDimensions();
   
   useEffect(() => {
@@ -97,25 +100,32 @@ export const MemoriesScreen: React.FC = () => {
   const summarySize = isTinyScreen ? 13 : isSmallScreen ? 14 : 15;
   const countSize = isTinyScreen ? 11 : isSmallScreen ? 12 : 13;
   
-  // Load previously generated summaries from storage on mount
-  useEffect(() => {
-    const loadStoredSummaries = async () => {
-      try {
-        console.log(`📖 [MEMORIES] Loading stored summaries from AsyncStorage...`);
-        const stored = await loadDailySummaries();
-        if (stored.length > 0) {
-          console.log(`✅ [MEMORIES] Loaded ${stored.length} stored summar${stored.length === 1 ? 'y' : 'ies'}`);
-          setDailySummaries(stored);
-        } else {
-          console.log(`📭 [MEMORIES] No stored summaries found`);
-        }
-      } catch (error) {
-        console.error(`❌ [MEMORIES] Error loading stored summaries:`, error);
+  const loadStoredSummaries = useCallback(async () => {
+    try {
+      console.log(`📖 [MEMORIES] Loading stored summaries from AsyncStorage...`);
+      const stored = await loadDailySummaries();
+      if (stored.length > 0) {
+        console.log(`✅ [MEMORIES] Loaded ${stored.length} stored summar${stored.length === 1 ? 'y' : 'ies'}`);
+        setDailySummaries(stored);
+      } else {
+        console.log(`📭 [MEMORIES] No stored summaries found`);
+        setDailySummaries([]);
       }
-    };
-    
-    loadStoredSummaries();
+    } catch (error) {
+      console.error(`❌ [MEMORIES] Error loading stored summaries:`, error);
+    }
   }, []);
+
+  // Load summaries on mount and whenever the screen is focused
+  useEffect(() => {
+    loadStoredSummaries();
+  }, [loadStoredSummaries]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadStoredSummaries();
+    }, [loadStoredSummaries])
+  );
   
   // Check for end of day and auto-generate (only for most recent day)
   useEffect(() => {
@@ -129,7 +139,8 @@ export const MemoriesScreen: React.FC = () => {
         const mostRecentDayMoments = getMostRecentDayMoments(moments);
         if (mostRecentDayMoments.length > 0) {
           console.log(`🌙 [MEMORIES] End of day - auto-generating daily summary for most recent day (${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'})`);
-          generateDailySummaries();
+          const mostRecentDate = new Date(mostRecentDayMoments[0].startTime).toDateString();
+          generateDailySummaries(mostRecentDayMoments, mostRecentDate);
           // Summary will be automatically saved to AsyncStorage by generateDailySummaries
         } else {
           console.log(`🌙 [MEMORIES] End of day - no moments to generate summary`);
@@ -142,19 +153,14 @@ export const MemoriesScreen: React.FC = () => {
     return () => clearInterval(interval);
   }, [moments]);
   
-  const generateDailySummaries = async () => {
+  const generateDailySummaries = async (targetMoments: MemoryEntry[], targetDate: string) => {
     try {
-      // Get only moments from the most recent day
-      const mostRecentDayMoments = getMostRecentDayMoments(moments);
-      
-      if (mostRecentDayMoments.length === 0) {
-        console.log(`⚠️ [MEMORIES] No moments found for the most recent day`);
-        Alert.alert('No Moments', 'No moments found for the most recent day. Add some moments first.');
+      if (targetMoments.length === 0) {
+        console.log(`⚠️ [MEMORIES] No moments found for ${targetDate}`);
+        Alert.alert('No Moments', 'No moments found for the selected day. Add some moments first.');
         return;
       }
-      
-      const mostRecentDate = new Date(mostRecentDayMoments[0].startTime).toDateString();
-      console.log(`📅 [MEMORIES] Generating summary for most recent day: ${mostRecentDate} (${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'})`);
+      console.log(`📅 [MEMORIES] Generating summary for day: ${targetDate} (${targetMoments.length} moment${targetMoments.length === 1 ? '' : 's'})`);
       
       // First check if backend is reachable
       console.log(`🔍 [MEMORIES] Checking backend health...`);
@@ -162,16 +168,16 @@ export const MemoriesScreen: React.FC = () => {
       if (!isHealthy) {
         console.warn(`⚠️ [MEMORIES] Backend health check failed - backend may be unreachable`);
         console.warn(`   Using local fallback instead`);
-        generateLocalSummaries();
+        generateLocalSummaries(targetMoments, targetDate);
         return;
       }
       console.log(`✅ [MEMORIES] Backend is reachable`);
       
       const apiUrl = `${API_CONFIG.BASE_URL}/api/memory/daily-summaries`;
-      console.log(`🚀 [MEMORIES] Calling backend API for daily summary from ${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'}...`);
+      console.log(`🚀 [MEMORIES] Calling backend API for daily summary from ${targetMoments.length} moment${targetMoments.length === 1 ? '' : 's'}...`);
       console.log(`🌐 [MEMORIES] API URL: ${apiUrl}`);
       console.log(`🌐 [MEMORIES] API_CONFIG.BASE_URL: ${API_CONFIG.BASE_URL}`);
-      console.log(`📤 [MEMORIES] Sending ${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'} to backend for date: ${mostRecentDate}`);
+      console.log(`📤 [MEMORIES] Sending ${targetMoments.length} moment${targetMoments.length === 1 ? '' : 's'} to backend for date: ${targetDate}`);
       
       // Call backend API for AI-powered summaries (only for most recent day)
       const controller = new AbortController();
@@ -181,8 +187,8 @@ export const MemoriesScreen: React.FC = () => {
       }, 60000); // 60s timeout for Gemini
       
       const requestBody = JSON.stringify({ 
-        memories: mostRecentDayMoments,
-        targetDate: mostRecentDate, // Specify the target date
+        memories: targetMoments,
+        targetDate, // Specify the target date
       });
       console.log(`📦 [MEMORIES] Request body size: ${requestBody.length} bytes`);
       
@@ -216,7 +222,7 @@ export const MemoriesScreen: React.FC = () => {
         summary: s.summary,
         description: s.description || '', // Include description from backend
         highlights: s.highlights || [],
-        memories: mostRecentDayMoments.filter(m => {
+        memories: targetMoments.filter(m => {
           const momentDate = new Date(m.startTime).toDateString();
           return momentDate === s.date;
         }),
@@ -226,7 +232,7 @@ export const MemoriesScreen: React.FC = () => {
       
       // Replace existing summary for this date if it exists, otherwise add it
       setDailySummaries(prev => {
-        const filtered = prev.filter(s => s.date !== mostRecentDate);
+        const filtered = prev.filter(s => s.date !== targetDate);
         const updated = [...filtered, ...summaries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
         // Save to storage
@@ -236,7 +242,7 @@ export const MemoriesScreen: React.FC = () => {
         
         return updated;
       });
-      console.log(`📊 [MEMORIES] Updated summaries (${summaries.length} new summary for ${mostRecentDate})`);
+      console.log(`📊 [MEMORIES] Updated summaries (${summaries.length} new summary for ${targetDate})`);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         console.error(`⏱️ [MEMORIES] Request aborted (timeout or cancelled)`);
@@ -254,7 +260,7 @@ export const MemoriesScreen: React.FC = () => {
       }
       // Fallback to local generation
       console.log(`📝 [MEMORIES] Falling back to local summary generation`);
-      generateLocalSummaries();
+      generateLocalSummaries(targetMoments, targetDate);
     }
   };
   
@@ -279,24 +285,23 @@ export const MemoriesScreen: React.FC = () => {
     });
   };
   
-  const generateLocalSummaries = () => {
-    // Get only moments from the most recent day
-    const mostRecentDayMoments = getMostRecentDayMoments(moments);
-    
-    if (mostRecentDayMoments.length === 0) {
-      console.log(`⚠️ [MEMORIES] No moments found for the most recent day`);
+  const getMomentsForDate = (allMoments: MemoryEntry[], date: string): MemoryEntry[] => {
+    return allMoments.filter(m => new Date(m.startTime).toDateString() === date);
+  };
+  
+  const generateLocalSummaries = (targetMoments: MemoryEntry[], targetDate: string) => {
+    if (targetMoments.length === 0) {
+      console.log(`⚠️ [MEMORIES] No moments found for ${targetDate}`);
       return;
     }
-    
-    const mostRecentDate = new Date(mostRecentDayMoments[0].startTime).toDateString();
-    console.log(`📝 [MEMORIES] Generating local summary for most recent day: ${mostRecentDate} (${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'})...`);
+    console.log(`📝 [MEMORIES] Generating local summary for day: ${targetDate} (${targetMoments.length} moment${targetMoments.length === 1 ? '' : 's'})...`);
     
     // Generate summary for only the most recent day
-    const summary = generateSummaryForDay(mostRecentDayMoments, mostRecentDate);
+    const summary = generateSummaryForDay(targetMoments, targetDate);
     
     // Replace existing summary for this date if it exists, otherwise add it
     setDailySummaries(prev => {
-      const filtered = prev.filter(s => s.date !== mostRecentDate);
+      const filtered = prev.filter(s => s.date !== targetDate);
       const updated = [...filtered, summary].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       
       // Save to storage
@@ -306,7 +311,7 @@ export const MemoriesScreen: React.FC = () => {
       
       return updated;
     });
-    console.log(`✅ [MEMORIES] Generated local summary for ${mostRecentDate}`);
+    console.log(`✅ [MEMORIES] Generated local summary for ${targetDate}`);
   };
   
   const generateSummaryForDay = (dayMemories: MemoryEntry[], date: string): DailySummary => {
@@ -392,10 +397,41 @@ export const MemoriesScreen: React.FC = () => {
     
     setIsGenerating(true);
     try {
-      await generateDailySummaries();
+      await generateDailySummaries(mostRecentDayMoments, mostRecentDate);
       console.log(`✅ [MEMORIES] Successfully generated summary for ${mostRecentDate}`);
       Alert.alert('✨ Generated!', `Created daily summary for ${formatDate(mostRecentDate)} from ${mostRecentDayMoments.length} moment${mostRecentDayMoments.length === 1 ? '' : 's'}`);
       // Summary is automatically saved to AsyncStorage by generateDailySummaries
+    } catch (error) {
+      console.error(`❌ [MEMORIES] Error generating summary:`, error);
+      Alert.alert('Error', 'Failed to generate summary');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+  
+  const getLast15Days = (): string[] => {
+    const days: string[] = [];
+    const today = new Date();
+    for (let i = 0; i < 15; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      days.push(d.toDateString());
+    }
+    return days;
+  };
+  
+  const handleGenerateForSelectedDay = async () => {
+    const targetDate = selectedDate;
+    const dayMoments = getMomentsForDate(moments, targetDate);
+    if (dayMoments.length === 0) {
+      Alert.alert('No Moments', `No moments found for ${formatDate(targetDate)}.`);
+      return;
+    }
+    setIsDayDropdownOpen(false);
+    setIsGenerating(true);
+    try {
+      await generateDailySummaries(dayMoments, targetDate);
+      Alert.alert('✨ Generated!', `Created daily summary for ${formatDate(targetDate)} from ${dayMoments.length} moment${dayMoments.length === 1 ? '' : 's'}`);
     } catch (error) {
       console.error(`❌ [MEMORIES] Error generating summary:`, error);
       Alert.alert('Error', 'Failed to generate summary');
@@ -434,6 +470,69 @@ export const MemoriesScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <GlassSurface style={styles.dayPickerCard} intensity={24}>
+          <Text style={[styles.dayPickerTitle, { fontSize: dateSize }]}>
+            Generate for a specific day
+          </Text>
+          <Text style={[styles.dayPickerSubtitle, { fontSize: countSize }]}>
+            Choose any day in the last 15 days
+          </Text>
+          <View style={styles.dayPickerControls}>
+            <TouchableOpacity
+              style={styles.dayDropdown}
+              onPress={() => setIsDayDropdownOpen(prev => !prev)}
+            >
+              <Text style={[styles.dayDropdownText, { fontSize: countSize + 1 }]}>
+                {formatDate(selectedDate)}
+              </Text>
+              <Text style={styles.dayDropdownIcon}>{isDayDropdownOpen ? '▲' : '▼'}</Text>
+            </TouchableOpacity>
+          </View>
+          {isDayDropdownOpen && (
+            <View style={styles.dayDropdownList}>
+              <ScrollView style={{ maxHeight: 220 }} showsVerticalScrollIndicator={false}>
+                {getLast15Days().map((day) => {
+                  const isSelected = selectedDate === day;
+                  const hasMoments = getMomentsForDate(moments, day).length > 0;
+                  return (
+                    <TouchableOpacity
+                      key={`dropdown-${day}`}
+                      style={[styles.dayDropdownItem, isSelected && styles.dayDropdownItemSelected]}
+                      onPress={() => {
+                        setSelectedDate(day);
+                        setIsDayDropdownOpen(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.dayDropdownItemText,
+                          { fontSize: countSize },
+                          isSelected && styles.dayDropdownItemTextSelected,
+                          !hasMoments && styles.dayDropdownItemTextMuted,
+                        ]}
+                      >
+                        {formatDate(day)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.dayGenerateButton}
+            onPress={handleGenerateForSelectedDay}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <ActivityIndicator size="small" color={Colors.textPrimary} />
+            ) : (
+              <Text style={[styles.dayGenerateButtonText, { fontSize: countSize }]}>
+                Generate for Selected Day
+              </Text>
+            )}
+          </TouchableOpacity>
+        </GlassSurface>
         {dailySummaries.length === 0 ? (
           // Empty State
           <View style={styles.emptyState}>
@@ -610,6 +709,113 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     ...Shadows.medium,
+  },
+  dayPickerCard: {
+    backgroundColor: 'rgba(52, 55, 60, 0.6)',
+    borderRadius: BorderRadius.extraLarge,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  dayPickerControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  dayDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.extraLarge,
+    backgroundColor: Colors.cardDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    minWidth: 200,
+  },
+  dayDropdownText: {
+    color: Colors.textPrimary,
+    fontWeight: '600',
+  },
+  dayDropdownIcon: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    marginLeft: Spacing.sm,
+  },
+  dayDropdownList: {
+    backgroundColor: Colors.cardDark,
+    borderRadius: BorderRadius.large,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  dayDropdownItem: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  dayDropdownItemSelected: {
+    backgroundColor: Colors.primary,
+  },
+  dayDropdownItemText: {
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  dayDropdownItemTextSelected: {
+    color: Colors.textPrimary,
+  },
+  dayDropdownItemTextMuted: {
+    color: Colors.textMuted,
+  },
+  dayPickerTitle: {
+    color: Colors.textPrimary,
+    fontWeight: '700',
+    marginBottom: Spacing.xs,
+  },
+  dayPickerSubtitle: {
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+  },
+  dayPickerScroll: {
+    marginBottom: Spacing.md,
+  },
+  dayOption: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.extraLarge,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginRight: Spacing.sm,
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+  },
+  dayOptionSelected: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primaryLight,
+  },
+  dayOptionText: {
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  dayOptionTextSelected: {
+    color: Colors.textPrimary,
+  },
+  dayOptionTextMuted: {
+    color: Colors.textMuted,
+  },
+  dayGenerateButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.extraLarge,
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
+  },
+  dayGenerateButtonText: {
+    color: Colors.textPrimary,
+    fontWeight: '700',
   },
   summaryHeader: {
     flexDirection: 'row',

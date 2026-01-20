@@ -16,6 +16,8 @@ import * as fs from 'fs';
 import { checkRateLimit, recordRequest } from './geminiRateLimiter';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const PRIMARY_MODEL = 'gemini-2.5-flash';
+const FALLBACK_MODELS = ['gemini-2.5-flash-lite', 'gemini-3-flash'];
 
 let genAI: GoogleGenerativeAI | null = null;
 let model: any = null;
@@ -31,13 +33,48 @@ function initializeGemini() {
 
   try {
     genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    model = genAI.getGenerativeModel({ model: PRIMARY_MODEL });
     console.log('[Gemini Memories] ✅ Initialized successfully');
     return true;
   } catch (error) {
     console.error('[Gemini Memories] Failed to initialize:', error);
     return false;
   }
+}
+
+function isRetryableGeminiError(error: any): boolean {
+  const message = String(error?.message || '');
+  const status = error?.status || error?.statusCode || error?.response?.status;
+  return status === 503 || status === 429 || message.includes('503') || message.includes('overloaded');
+}
+
+async function generateWithFallback(promptParts: any[]): Promise<{ result: any; modelName: string }> {
+  if (!genAI && !initializeGemini()) {
+    throw new Error('Gemini not initialized');
+  }
+  const modelNames = [PRIMARY_MODEL, ...FALLBACK_MODELS];
+  let lastError: any;
+
+  for (const modelName of modelNames) {
+    try {
+      const activeModel = modelName === PRIMARY_MODEL && model
+        ? model
+        : genAI!.getGenerativeModel({ model: modelName });
+      if (modelName !== PRIMARY_MODEL) {
+        console.warn(`[Gemini Memories] ⚠️ Falling back to ${modelName}`);
+      }
+      const result = await activeModel.generateContent(promptParts);
+      return { result, modelName };
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableGeminiError(error)) {
+        throw error;
+      }
+      console.warn(`[Gemini Memories] ⚠️ ${modelName} failed, trying next model`);
+    }
+  }
+
+  throw lastError;
 }
 
 // Rate limiting is now handled by geminiRateLimiter.ts (shared across all Gemini services)
@@ -250,9 +287,12 @@ export async function analyzeMemoryWithGemini(
     }
 
     // Call Gemini
-    const result = await model.generateContent(promptParts);
+    const { result, modelName } = await generateWithFallback(promptParts);
     const response = result.response;
     const text = response.text();
+    if (modelName !== PRIMARY_MODEL) {
+      console.log(`[Gemini Memories] ✅ Used fallback model: ${modelName}`);
+    }
 
     // Parse response
     try {
