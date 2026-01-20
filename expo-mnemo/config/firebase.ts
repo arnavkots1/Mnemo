@@ -25,7 +25,7 @@ const validateFirebaseConfig = () => {
   if (missingKeys.length > 0) {
     console.error('❌ Missing Firebase config keys:', missingKeys.join(', '));
     console.error('📝 Please add these to your .env file');
-    console.error('📚 See FIREBASE_SETUP.md for instructions');
+    console.error('📚 See DOCUMENTATION.md for instructions');
     return false;
   }
   return true;
